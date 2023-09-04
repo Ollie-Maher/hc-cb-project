@@ -42,9 +42,11 @@ class Workspace:
 
         self.logger = Logger(self.work_dir, use_tb=cfg.use_tb, use_wandb=cfg.use_wandb)
 
-        self.train_env = make_env(cfg.task)
-        self.eval_env = make_env(cfg.task)
-        # self.eval_env = self.train_env 
+        self.train_envs = make_env(cfg.task, cfg.seed)
+        self.train_env = self.train_envs[0]
+        self.eval_envs = make_env(cfg.task, cfg.seed)
+        self.eval_env = self.eval_envs[0]
+        # self.eval_env = self.train_env
 
         # create agent
         # print(self.train_env.observation_space)
@@ -161,6 +163,7 @@ class Workspace:
         )
 
         episode_step, episode_reward = 0, 0
+        switch_env = False
         time_step = self.train_env.reset()
         # print(time_step)
         # meta = self.agent.init_meta()
@@ -189,6 +192,16 @@ class Workspace:
                         log("step", self.global_step)
 
                 # reset env
+                # switch north vs south env after 600 episodes
+                if self.global_episode % 600 == 0:
+                    # switch_env = not switch_env
+                    switch_env = True
+                    self.train_env = (
+                        self.train_envs[1] if switch_env else self.train_envs[0]
+                    )
+                    self.eval_env = (
+                        self.eval_envs[1] if switch_env else self.eval_envs[0]
+                    )
                 time_step = self.train_env.reset()
                 # print(time_step)
                 self.replay_storage.add(time_step, meta)

@@ -271,7 +271,7 @@ class Minigrid(dm_env.Environment):
         return self.env.seed(seed)
 
 
-def make_env(name):
+def make_env(name, seed):
     suite, task = name.split("-", 1)
     print(suite)
     if suite == "MiniGrid":  # name_format = "MiniGrid-Empty-8x8-v0"
@@ -307,14 +307,35 @@ def make_env(name):
     elif suite == "NeuroMaze":
         from neuro_maze import load
 
-        env = load(
+        env_list = []
+
+        env_north = load(
             domain="base1",
             task_name="reach_target",
             time_limit=5,
-            seed=0,
+            seed=seed,
             # top_camera=True,
             image_only_obs=True,
         )
+        env_north = FrameStackWrapper(env_north, 3)
+        env_north = ExtendedTimeStepWrapper(env_north)
+        env_list.append(env_north)
+
+        env_south = load(
+            domain="base1",
+            task_name="reach_target",
+            time_limit=5,
+            seed=seed,
+            # top_camera=True,
+            image_only_obs=True,
+            maze_ori="South",
+            # reward_loc="Right",
+        )
+        env_south = FrameStackWrapper(env_south, 3)
+        env_south = ExtendedTimeStepWrapper(env_south)
+        env_list.append(env_south)
+
+        return env_list
 
     else:
         env = None
