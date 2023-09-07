@@ -113,13 +113,13 @@ class QNet(nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim):
         super(QNet, self).__init__()
         self.fc1 = nn.Linear(state_dim, hidden_dim)
-        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
-        self.fc3 = nn.Linear(hidden_dim, action_dim)
+        self.fc2 = nn.Linear(hidden_dim, action_dim)
+        # self.fc3 = nn.Linear(hidden_dim, action_dim)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
+        x = self.fc2(x)
+        # x = self.fc3(x)
         return x
 
 
@@ -156,53 +156,53 @@ class DQNAgent:
         self.use_wandb = use_wandb
         self.epsilon = epsilon
 
-        # if obs_type == "pixels":
-        #     self.encoder = Encoder(obs_shape).to(self.device)
-        #     self.obs_dim = self.encoder.repr_dim
+        if obs_type == "pixels":
+            self.encoder = Encoder(obs_shape).to(self.device)
+            self.obs_dim = self.encoder.repr_dim
 
-        # else:
-        #     self.encoder = nn.Identity()
-        #     self.obs_dim = obs_shape[0]
+        else:
+            self.encoder = nn.Identity()
+            self.obs_dim = obs_shape[0]
 
-        self.q_net = QNetEncoder(self.obs_shape, self.hidden_dim, self.action_dim).to(
+        # self.q_net = QNetEncoder(self.obs_shape, self.hidden_dim, self.action_dim).to(
+        #     self.device
+        # )
+        # self.target_net = QNetEncoder(
+        #     self.obs_shape, self.hidden_dim, self.action_dim
+        # ).to(self.device)
+        self.q_net = QNet(self.encoder.repr_dim, self.hidden_dim, self.action_dim).to(
             self.device
         )
-        self.target_net = QNetEncoder(
-            self.obs_shape, self.hidden_dim, self.action_dim
-        ).to(self.device)
-        # self.q_net = QNet(self.encoder.repr_dim, self.hidden_dim, self.action_dim).to(
-        #     self.device
-        # )
-        # self.target_net = QNet(self.encoder.repr_dim, self.hidden_dim, self.action_dim).to(
-        #     self.device
-        # )
+        self.target_net = QNet(self.encoder.repr_dim, self.hidden_dim, self.action_dim).to(
+            self.device
+        )
         self.target_net.load_state_dict(self.q_net.state_dict())
 
         # optimizers
         self.q_net_optim = torch.optim.Adam(self.q_net.parameters(), lr=self.lr)
 
-        # if obs_type == "pixels":
-        #     self.encoder_optim = torch.optim.Adam(self.encoder.parameters(), lr=self.lr)
-        # else:
-        #     self.encoder_optim = None
+        if obs_type == "pixels":
+            self.encoder_optim = torch.optim.Adam(self.encoder.parameters(), lr=self.lr)
+        else:
+            self.encoder_optim = None
 
-        # # data augmentation
-        # self.aug = RandomShiftsAug(pad=4)
+        # data augmentation
+        self.aug = RandomShiftsAug(pad=4)
 
         self.train()
         self.target_net.train()
 
     def train(self, training=True):
         self.training = training
-        # self.encoder.train(training)
+        self.encoder.train(training)
         self.q_net.train(training)
 
     def act(self, obs, step):
         obs = torch.as_tensor(obs, device=self.device).unsqueeze(0)
         if np.random.rand() > self.epsilon:
             with torch.no_grad():  # probably don't need this as it is done before act
-                # q_values = self.q_net(self.encoder(obs))
-                q_values = self.q_net(obs)
+                q_values = self.q_net(self.encoder(obs))
+                # q_values = self.q_net(obs)
             action = q_values.argmax().item()
         else:
             action = np.random.randint(self.action_dim)
@@ -242,13 +242,13 @@ class DQNAgent:
             metrics["q_val"] = q_values.mean().item()
             metrics["q_target"] = next_q_values.mean().item()
 
-        # if self.encoder_optim is not None:
-        #     self.encoder_optim.zero_grad()
+        if self.encoder_optim is not None:
+            self.encoder_optim.zero_grad()
         self.q_net_optim.zero_grad()
         q_loss.backward()
         self.q_net_optim.step()
-        # if self.encoder_optim is not None:
-        #     self.encoder_optim.step()
+        if self.encoder_optim is not None:
+            self.encoder_optim.step()
 
         return metrics
 
@@ -264,12 +264,12 @@ class DQNAgent:
         actions = actions.type(torch.int64)
 
         # augment
-        # obs = self.aug(obs.float())
-        # next_obs = self.aug(next_obs.float())
-        # # encode
-        # obs = self.encoder(obs)
-        # with torch.no_grad():
-        #     next_obs = self.encoder(next_obs)
+        obs = self.aug(obs.float())
+        next_obs = self.aug(next_obs.float())
+        # encode
+        obs = self.encoder(obs)
+        with torch.no_grad():
+            next_obs = self.encoder(next_obs)
 
         # Update Q network
         metrics.update(self.learn(obs, actions, rewards, discount, next_obs, step))

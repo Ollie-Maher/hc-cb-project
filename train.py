@@ -42,9 +42,9 @@ class Workspace:
 
         self.logger = Logger(self.work_dir, use_tb=cfg.use_tb, use_wandb=cfg.use_wandb)
 
-        self.train_envs = make_env(cfg.task, cfg.seed)
+        self.train_envs = make_env(cfg.task, cfg.seed, cfg.frame_stack)
         self.train_env = self.train_envs[0]
-        self.eval_envs = make_env(cfg.task, cfg.seed)
+        self.eval_envs = make_env(cfg.task, cfg.seed, cfg.frame_stack)
         self.eval_env = self.eval_envs[0]
         # self.eval_env = self.train_env
 
@@ -195,7 +195,7 @@ class Workspace:
                 # switch north vs south env after 600 episodes
                 if self.global_episode % 600 == 0:
                     # switch_env = not switch_env
-                    switch_env = True
+                    switch_env = False # set to True to switch env
                     self.train_env = (
                         self.train_envs[1] if switch_env else self.train_envs[0]
                     )

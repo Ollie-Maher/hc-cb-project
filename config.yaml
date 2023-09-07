@@ -10,7 +10,7 @@ defaults:
 task: "NeuroMaze-TMaze" 
 domain: cheetah
 obs_type: pixels # [states | pixels]
-frame_stack: 3 # only works if obs_type=pixels
+frame_stack: 1 # only works if obs_type=pixels
 action_repeat: 1 # set to 2 for pixels
 discount: 0.99
 # train settings

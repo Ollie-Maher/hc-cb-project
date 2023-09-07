@@ -271,7 +271,7 @@ class Minigrid(dm_env.Environment):
         return self.env.seed(seed)
 
 
-def make_env(name, seed):
+def make_env(name, seed, frame_stack):
     suite, task = name.split("-", 1)
     print(suite)
     if suite == "MiniGrid":  # name_format = "MiniGrid-Empty-8x8-v0"
@@ -317,7 +317,7 @@ def make_env(name, seed):
             # top_camera=True,
             image_only_obs=True,
         )
-        env_north = FrameStackWrapper(env_north, 3)
+        env_north = FrameStackWrapper(env_north, num_frames=frame_stack)
         env_north = ExtendedTimeStepWrapper(env_north)
         env_list.append(env_north)
 
@@ -331,7 +331,7 @@ def make_env(name, seed):
             maze_ori="South",
             # reward_loc="Right",
         )
-        env_south = FrameStackWrapper(env_south, 3)
+        env_south = FrameStackWrapper(env_south, num_frames=frame_stack)
         env_south = ExtendedTimeStepWrapper(env_south)
         env_list.append(env_south)
 
@@ -341,6 +341,6 @@ def make_env(name, seed):
         env = None
 
     # env = ExtendedTimeStepWrapper(env)
-    env = FrameStackWrapper(env, 3)
+    env = FrameStackWrapper(env, num_frames=frame_stack)
     env = ExtendedTimeStepWrapper(env)
     return env
