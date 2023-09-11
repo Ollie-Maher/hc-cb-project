@@ -87,6 +87,7 @@ class Workspace:
             False,
             cfg.nstep,
             cfg.discount,
+            cfg.sequence_length,
         )
         self._replay_iter = None
 
@@ -195,7 +196,7 @@ class Workspace:
                 # switch north vs south env after 600 episodes
                 if self.global_episode % 600 == 0:
                     # switch_env = not switch_env
-                    switch_env = False # set to True to switch env
+                    switch_env = False  # set to True to switch env
                     self.train_env = (
                         self.train_envs[1] if switch_env else self.train_envs[0]
                     )

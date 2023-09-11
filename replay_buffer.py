@@ -90,6 +90,7 @@ class ReplayBuffer(IterableDataset):
         discount,
         fetch_every,
         save_snapshot,
+        sequence_len,
     ):
         self._storage = storage
         self._size = 0
@@ -102,6 +103,7 @@ class ReplayBuffer(IterableDataset):
         self._fetch_every = fetch_every
         self._samples_since_last_fetch = fetch_every
         self._save_snapshot = save_snapshot
+        self._sequence_length = sequence_len
 
     def _sample_episode(self):
         eps_fn = random.choice(self._episode_fns)
@@ -157,20 +159,57 @@ class ReplayBuffer(IterableDataset):
         self._samples_since_last_fetch += 1
         episode = self._sample_episode()
         # add +1 for the first dummy transition
-        idx = np.random.randint(0, episode_len(episode) - self._nstep + 1) + 1
+        idx = (
+            np.random.randint(
+                0, episode_len(episode) - self._sequence_length - self._nstep + 1
+            )
+            + 1
+        )
+        obs_seq = []
+        action_seq = []
+        reward_seq = []
+        discount_seq = []
+        next_obs_seq = []
+        for i in range(self._sequence_length):
+            obs_seq.append(episode["observation"][idx - 1 + i])
+            action_seq.append(episode["action"][idx + i])
+            # reward_seq.append()
+            # discount_seq.append()
+            next_obs_seq.append(episode["observation"][idx + i + self._nstep - 1])
+            reward = np.zeros_like(episode["reward"][idx + i])
+            discount = np.ones_like(episode["discount"][idx + i])
+            for j in range(self._nstep):
+                step_reward = episode["reward"][idx + i + j]
+                reward += discount * step_reward
+                discount *= episode["discount"][idx + i + j] * self._discount
+            reward_seq.append(reward)
+            discount_seq.append(discount)
+
         meta = []
         for spec in self._storage._meta_specs:
             meta.append(episode[spec.name][idx - 1])
-        obs = episode["observation"][idx - 1]
-        action = episode["action"][idx]
-        next_obs = episode["observation"][idx + self._nstep - 1]
-        reward = np.zeros_like(episode["reward"][idx])
-        discount = np.ones_like(episode["discount"][idx])
-        for i in range(self._nstep):
-            step_reward = episode["reward"][idx + i]
-            reward += discount * step_reward
-            discount *= episode["discount"][idx + i] * self._discount
-        return (obs, action, reward, discount, next_obs, *meta)
+        return (
+            np.stack(obs_seq),
+            np.stack(action_seq),
+            np.stack(reward_seq),
+            np.stack(discount_seq),
+            np.stack(next_obs_seq),
+            *meta,
+        )
+
+        # meta = []
+        # for spec in self._storage._meta_specs:
+        #     meta.append(episode[spec.name][idx - 1])
+        # obs = episode["observation"][idx - 1]
+        # action = episode["action"][idx]
+        # next_obs = episode["observation"][idx + self._nstep - 1]
+        # reward = np.zeros_like(episode["reward"][idx])
+        # discount = np.ones_like(episode["discount"][idx])
+        # for i in range(self._nstep):
+        #     step_reward = episode["reward"][idx + i]
+        #     reward += discount * step_reward
+        #     discount *= episode["discount"][idx + i] * self._discount
+        # return (obs, action, reward, discount, next_obs, *meta)
 
     def __iter__(self):
         while True:
@@ -184,7 +223,14 @@ def _worker_init_fn(worker_id):
 
 
 def make_replay_loader(
-    storage, max_size, batch_size, num_workers, save_snapshot, nstep, discount
+    storage,
+    max_size,
+    batch_size,
+    num_workers,
+    save_snapshot,
+    nstep,
+    discount,
+    sequence_len,
 ):
     max_size_per_worker = max_size // max(1, num_workers)
 
@@ -196,6 +242,7 @@ def make_replay_loader(
         discount,
         fetch_every=1000,
         save_snapshot=save_snapshot,
+        sequence_len=sequence_len,
     )
 
     loader = torch.utils.data.DataLoader(
