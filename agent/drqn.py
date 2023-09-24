@@ -5,6 +5,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import utils
+from torchvision import transforms
+from torchvision.models import resnet18
 
 
 class RandomShiftsAug(nn.Module):
@@ -69,6 +71,76 @@ class Encoder(nn.Module):
         return h
 
 
+class ResEncoder(nn.Module):
+    def __init__(self, obs_shape):
+        super(ResEncoder, self).__init__()
+        self.model = resnet18(pretrained=True)
+        self.transform = transforms.Compose(
+            [transforms.Resize(256), transforms.CenterCrop(224)]
+        )
+
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+        self.num_ftrs = self.model.fc.in_features
+        self.model.fc = nn.Identity()
+        self.repr_dim = 1024
+        self.image_channel = 3
+        # x = torch.randn([32] + [9, 84, 84])
+        x = torch.randn([32] + [obs_shape[0], 64, 64])
+        with torch.no_grad():
+            out_shape = self.forward_conv(x).shape
+        self.out_dim = out_shape[1]
+        self.fc = nn.Linear(self.out_dim, self.repr_dim)
+        self.ln = nn.LayerNorm(self.repr_dim)
+        #
+        # Initialization
+        nn.init.orthogonal_(self.fc.weight.data)
+        self.fc.bias.data.fill_(0.0)
+
+    @torch.no_grad()
+    def forward_conv(self, obs, flatten=True):
+        # print(f"obs shape: {obs.shape}")
+        obs = obs / 255.0 - 0.5
+        # time_step = obs.shape[1] // self.image_channel
+        # obs = obs.view(
+        #     obs.shape[0], time_step, self.image_channel, obs.shape[-2], obs.shape[-1]
+        # )
+        # obs = obs.view(
+        #     obs.shape[0] * time_step, self.image_channel, obs.shape[-2], obs.shape[-1]
+        # )
+
+        for name, module in self.model._modules.items():
+            obs = module(obs)
+            if name == "layer2":
+                break
+
+        # conv = obs.view(
+        #     obs.size(0) // time_step, time_step, obs.size(1), obs.size(2), obs.size(3)
+        # )
+        # conv_current = conv[:, 1:, :, :, :]
+        # conv_prev = conv_current - conv[:, : time_step - 1, :, :, :].detach()
+        # conv = torch.cat([conv_current, conv_prev], axis=1)
+        # conv = conv.view(
+        #     conv.size(0), conv.size(1) * conv.size(2), conv.size(3), conv.size(4)
+        # )
+        # print(obs.shape)
+        if flatten:
+            conv = obs.view(obs.size(0), -1)
+
+        # print(conv.shape)
+
+        return conv
+
+    def forward(self, obs):
+        # print(f"obs shape: {obs.shape}")
+        conv = self.forward_conv(obs)
+        out = self.fc(conv)
+        out = self.ln(out)
+        # obs = self.model(self.transform(obs.to(torch.float32)) / 255.0 - 0.5)
+        return out
+
+
 class RecurrentQNet(nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim, device):
         super(RecurrentQNet, self).__init__()
@@ -130,7 +202,8 @@ class DRQNAgent:
         self.epsilon = epsilon
 
         if obs_type == "pixels":
-            self.encoder = Encoder(obs_shape).to(self.device)
+            # self.encoder = Encoder(obs_shape).to(self.device)
+            self.encoder = ResEncoder(obs_shape).to(self.device)
             self.obs_dim = self.encoder.repr_dim
 
         else:

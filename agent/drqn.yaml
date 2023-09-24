@@ -13,5 +13,5 @@ tau: 0.01
 update_every_steps: 2
 use_wandb: ${use_wandb}
 nstep: 1
-sequence_length: 5
+sequence_length: 100
 epsilon: 0.1

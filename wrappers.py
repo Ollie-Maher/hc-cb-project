@@ -312,7 +312,7 @@ def make_env(name, seed, frame_stack):
         env_north = load(
             domain="base1",
             task_name="reach_target",
-            time_limit=5,
+            time_limit=10,
             seed=seed,
             # top_camera=True,
             image_only_obs=True,
@@ -324,12 +324,12 @@ def make_env(name, seed, frame_stack):
         env_south = load(
             domain="base1",
             task_name="reach_target",
-            time_limit=5,
+            time_limit=10,
             seed=seed,
             # top_camera=True,
             image_only_obs=True,
             maze_ori="South",
-            # reward_loc="Right",
+            reward_loc="Right",
         )
         env_south = FrameStackWrapper(env_south, num_frames=frame_stack)
         env_south = ExtendedTimeStepWrapper(env_south)

@@ -194,9 +194,11 @@ class Workspace:
 
                 # reset env
                 # switch north vs south env after 600 episodes
-                if self.global_episode % 600 == 0:
-                    # switch_env = not switch_env
-                    switch_env = False  # set to True to switch env
+                # if self.global_episode % 600 == 0:
+                # alternate each trial between north and south
+                if self.global_episode % 2 == 0:
+                    switch_env = not switch_env
+                    # switch_env = True  # set to True to switch env
                     self.train_env = (
                         self.train_envs[1] if switch_env else self.train_envs[0]
                     )

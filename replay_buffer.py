@@ -161,7 +161,9 @@ class ReplayBuffer(IterableDataset):
         # add +1 for the first dummy transition
         idx = (
             np.random.randint(
-                0, episode_len(episode) - self._sequence_length - self._nstep + 1
+                0,
+                episode_len(episode) - self._nstep + 1
+                # 0, episode_len(episode) - self._sequence_length + 1 - self._nstep + 1
             )
             + 1
         )
@@ -170,7 +172,19 @@ class ReplayBuffer(IterableDataset):
         reward_seq = []
         discount_seq = []
         next_obs_seq = []
+        eps_len = episode_len(episode)
+        # print("eps_len", eps_len)
         for i in range(self._sequence_length):
+            # print("idx", idx)
+            # print("i", i)
+            # append with zeros for sequence above episode length
+            if idx + i >= eps_len:
+                obs_seq.append(np.zeros_like(episode["observation"][eps_len - 1]))
+                action_seq.append(np.zeros_like(episode["action"][eps_len - 1]))
+                next_obs_seq.append(np.zeros_like(episode["observation"][eps_len - 1]))
+                reward_seq.append(np.zeros_like(episode["reward"][eps_len - 1]))
+                discount_seq.append(np.zeros_like(episode["discount"][eps_len - 1]))
+                continue
             obs_seq.append(episode["observation"][idx - 1 + i])
             action_seq.append(episode["action"][idx + i])
             # reward_seq.append()
