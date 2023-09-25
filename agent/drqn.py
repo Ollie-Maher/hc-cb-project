@@ -152,16 +152,16 @@ class RecurrentQNet(nn.Module):
 
         self.apply(utils.weight_init)  # why
 
-    def forward(self, x):
+    def forward(self, x, hidden=None):
         # x shape (batch_size, seq_len, state_dim)
         batch_size = x.shape[0]  # obs.size(0)
-        hidden = self.init_hidden(batch_size)
+        hidden = self.init_hidden(batch_size) if hidden is None else hidden
 
-        gru_out, _ = self.gru(x, hidden)
+        gru_out, gru_hidden = self.gru(x, hidden)
         out = F.relu(self.fc(gru_out))
         out = self.out(gru_out)
 
-        return out
+        return out, gru_hidden
 
     def init_hidden(self, batch_size):
         return torch.zeros(1, batch_size, self.hidden_dim, device=self.device)
@@ -200,6 +200,7 @@ class DRQNAgent:
         self.device = device
         self.use_wandb = use_wandb
         self.epsilon = epsilon
+        self.gru_hidden = None
 
         if obs_type == "pixels":
             # self.encoder = Encoder(obs_shape).to(self.device)
@@ -237,13 +238,16 @@ class DRQNAgent:
         self.encoder.train(training)
         self.q_net.train(training)
 
+    def reset(self):
+        self.gru_hidden = None
+
     def act(self, obs, step):
         obs = torch.as_tensor(obs, device=self.device).unsqueeze(0)
         if np.random.rand() > self.epsilon:
             with torch.no_grad():  # probably don't need this as it is done before act
                 features = self.encoder(obs)  # (1, 32*29*29)
-                q_values = self.q_net(
-                    features.unsqueeze(0)
+                q_values, self.gru_hidden = self.q_net(
+                    features.unsqueeze(0), self.gru_hidden
                 )  # (1, 1, features_dim) adding extra dim for seq_len
                 # print(q_values.shape)
                 # q_values = self.q_net(obs)
@@ -259,7 +263,7 @@ class DRQNAgent:
         # print(f"actions.unsqueeze {actions.unsqueeze(-1).shape}")
         # Update Q network
         # q_values = self.q_net(self.encoder(obs))
-        q_values = self.q_net(obs)
+        q_values, _ = self.q_net(obs)
         # print(q_values)
         # we unsqueeze(-1) the actions to get shape (batch_size, 1) which matchtes
         # rewards shape of (batch_size, 1). Unsqueeze is not required and alternatively
@@ -268,7 +272,7 @@ class DRQNAgent:
         # print(f"q_val {q_values}")
 
         with torch.no_grad():
-            next_q_values = self.target_net(next_obs)
+            next_q_values, _ = self.target_net(next_obs)
             # next_q_values shape is [batch_size, action_dim], getting max(1)[0} will
             # give shape of [batch_size], hence unsqueeze(-1) to get [batch_size, 1]
             # which will match the shape rewards and q_values

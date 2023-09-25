@@ -266,6 +266,9 @@ class DQNAgent:
         self.encoder.train(training)
         self.q_net.train(training)
 
+    def reset(self):
+        pass
+
     def act(self, obs, step):
         obs = torch.as_tensor(obs, device=self.device).unsqueeze(0)
         if np.random.rand() > self.epsilon:

@@ -215,6 +215,7 @@ class Workspace:
                     self.save_snapshot()
                 episode_step = 0
                 episode_reward = 0
+                self.agent.reset()  # reset agent, set rnn hidden to None
 
             # try to evaluate
             if eval_every_step(self.global_step):
