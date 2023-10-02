@@ -174,16 +174,32 @@ class ReplayBuffer(IterableDataset):
         next_obs_seq = []
         eps_len = episode_len(episode)
         # print("eps_len", eps_len)
+        reward = None
+        discount = None
         for i in range(self._sequence_length):
             # print("idx", idx)
             # print("i", i)
             # append with zeros for sequence above episode length
-            if idx + i >= eps_len:
+            if idx + i > eps_len:
+                # print("eps_len", eps_len)
+                # print("appending zeros")
                 obs_seq.append(np.zeros_like(episode["observation"][eps_len - 1]))
                 action_seq.append(np.zeros_like(episode["action"][eps_len - 1]))
                 next_obs_seq.append(np.zeros_like(episode["observation"][eps_len - 1]))
-                reward_seq.append(np.zeros_like(episode["reward"][eps_len - 1]))
-                discount_seq.append(np.zeros_like(episode["discount"][eps_len - 1]))
+                # reward_seq.append(np.zeros_like(episode["reward"][eps_len - 1]))
+                # discount_seq.append(np.zeros_like(episode["discount"][eps_len - 1]))
+                reward = (
+                    np.zeros_like(episode["reward"][eps_len - 1])
+                    if reward is None
+                    else reward
+                )
+                discount = (
+                    np.ones_like(episode["discount"][eps_len - 1])
+                    if discount is None
+                    else discount
+                )
+                reward_seq.append(reward)
+                discount_seq.append(discount)
                 continue
             obs_seq.append(episode["observation"][idx - 1 + i])
             action_seq.append(episode["action"][idx + i])

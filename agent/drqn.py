@@ -246,6 +246,7 @@ class DRQNAgent:
         if np.random.rand() > self.epsilon:
             with torch.no_grad():  # probably don't need this as it is done before act
                 features = self.encoder(obs)  # (1, 32*29*29)
+                # q_values, _ = self.q_net(features.unsqueeze(0))
                 q_values, self.gru_hidden = self.q_net(
                     features.unsqueeze(0), self.gru_hidden
                 )  # (1, 1, features_dim) adding extra dim for seq_len

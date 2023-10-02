@@ -8,6 +8,7 @@ import sys
 os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 os.environ["MUJOCO_GL"] = "egl"
 
+import random
 from collections import OrderedDict
 from pathlib import Path
 
@@ -194,10 +195,13 @@ class Workspace:
 
                 # reset env
                 # switch north vs south env after 600 episodes
-                # if self.global_episode % 600 == 0:
+                # if self.global_episode % 300 == 0:
                 # alternate each trial between north and south
-                if self.global_episode % 2 == 0:
+                if self.global_episode % 1 == 0:
                     switch_env = not switch_env
+                    # random true or false
+                    # switch_env = random.choice([True, False])
+                    # switch_env = False
                     # switch_env = True  # set to True to switch env
                     self.train_env = (
                         self.train_envs[1] if switch_env else self.train_envs[0]
@@ -209,10 +213,10 @@ class Workspace:
                 # print(time_step)
                 self.replay_storage.add(time_step, meta)
                 self.train_video_recorder.init(time_step.observation)
-                # try to save snapshot
-                if self.global_frame in self.cfg.snapshots:
-                    print("SAVING SNAPSHOT")
-                    self.save_snapshot()
+                # # try to save snapshot
+                # if self.global_frame in self.cfg.snapshots:
+                #     print("SAVING SNAPSHOT")
+                #     self.save_snapshot()
                 episode_step = 0
                 episode_reward = 0
                 self.agent.reset()  # reset agent, set rnn hidden to None
