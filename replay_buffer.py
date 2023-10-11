@@ -167,6 +167,7 @@ class ReplayBuffer(IterableDataset):
             )
             + 1
         )
+        # idx = idx - self._sequence_length if idx > self._sequence_length else 1
         obs_seq = []
         action_seq = []
         reward_seq = []

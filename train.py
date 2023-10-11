@@ -7,6 +7,7 @@ import sys
 
 os.environ["MKL_SERVICE_FORCE_INTEL"] = "1"
 os.environ["MUJOCO_GL"] = "egl"
+os.environ["HYDRA_FULL_ERROR"] = "1"
 
 import random
 from collections import OrderedDict
@@ -97,7 +98,8 @@ class Workspace:
             self.work_dir if cfg.save_video else None,
             # render_size=64,
             # fps=10,
-            camera_id=2 if "quadruped" not in self.cfg.domain else 2,
+            # 0 for top down view, 2 for ego view
+            camera_id=0 if "quadruped" not in self.cfg.domain else 2,
             use_wandb=self.cfg.use_wandb,
         )
         self.train_video_recorder = TrainVideoRecorder(
@@ -135,10 +137,13 @@ class Workspace:
         meta = OrderedDict()
         while eval_until_episode(episode):
             time_step = self.eval_env.reset()
+            self.agent.reset()  # reset agent hidden state
             self.video_recorder.init(self.eval_env, enabled=(episode == 0))
             while not time_step.last():
                 with torch.no_grad(), utils.eval_mode(self.agent):
-                    action = self.agent.act(time_step.observation, self.global_step)
+                    action = self.agent.act(
+                        time_step.observation, self.global_step, eval_mode=True
+                    )
                 time_step = self.eval_env.step(action)
                 # self.eval_env.render()
                 self.video_recorder.record(self.eval_env)
@@ -198,9 +203,9 @@ class Workspace:
                 # if self.global_episode % 300 == 0:
                 # alternate each trial between north and south
                 if self.global_episode % 1 == 0:
-                    switch_env = not switch_env
+                    # switch_env = not switch_env
                     # random true or false
-                    # switch_env = random.choice([True, False])
+                    switch_env = random.choice([True, False])
                     # switch_env = False
                     # switch_env = True  # set to True to switch env
                     self.train_env = (
@@ -230,7 +235,9 @@ class Workspace:
 
             # sample action
             with torch.no_grad(), utils.eval_mode(self.agent):
-                action = self.agent.act(time_step.observation, self.global_step)
+                action = self.agent.act(
+                    time_step.observation, self.global_step, eval_mode=False
+                )
 
             # try to update the agent
             if not seed_until_step(self.global_step):
@@ -238,6 +245,7 @@ class Workspace:
                 self.logger.log_metrics(metrics, self.global_frame, ty="train")
 
             # take env step
+            # print("action", action)
             time_step = self.train_env.step(action)
             # print(time_step.step_type, time_step.last())
             # print(episode_step)

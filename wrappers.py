@@ -3,6 +3,7 @@ from typing import Any, NamedTuple
 
 import dm_env
 import numpy as np
+from dm_control.suite.wrappers import action_scale
 from dm_env import StepType, specs
 
 
@@ -69,6 +70,65 @@ class ExtendedTimeStepWrapper(dm_env.Environment):
 
     def action_spec(self):
         return self._env.action_spec()
+
+    def __getattr__(self, name):
+        return getattr(self._env, name)
+
+
+class ActionRepeatWrapper(dm_env.Environment):
+    def __init__(self, env, num_repeats):
+        self._env = env
+        self._num_repeats = num_repeats
+
+    def step(self, action):
+        reward = 0.0
+        discount = 1.0
+        for i in range(self._num_repeats):
+            time_step = self._env.step(action)
+            reward += (time_step.reward or 0.0) * discount
+            discount *= time_step.discount
+            if time_step.last():
+                break
+
+        return time_step._replace(reward=reward, discount=discount)
+
+    def observation_spec(self):
+        return self._env.observation_spec()
+
+    def action_spec(self):
+        return self._env.action_spec()
+
+    def reset(self):
+        return self._env.reset()
+
+    def __getattr__(self, name):
+        return getattr(self._env, name)
+
+
+class ActionDTypeWrapper(dm_env.Environment):
+    def __init__(self, env, dtype):
+        self._env = env
+        wrapped_action_spec = env.action_spec()
+        self._action_spec = specs.BoundedArray(
+            wrapped_action_spec.shape,
+            dtype,
+            wrapped_action_spec.minimum,
+            wrapped_action_spec.maximum,
+            "action",
+        )
+
+    def step(self, action):
+        action = action.astype(self._env.action_spec().dtype)
+        return self._env.step(action)
+
+    def observation_spec(self):
+        return self._env.observation_spec()
+
+    def action_spec(self):
+        return self._action_spec
+
+    def reset(self):
+        return self._env.reset()
 
     def __getattr__(self, name):
         return getattr(self._env, name)
@@ -314,9 +374,13 @@ def make_env(name, seed, frame_stack):
             task_name="reach_target",
             time_limit=10,
             seed=seed,
-            # top_camera=True,
+            top_camera=True,
             image_only_obs=True,
+            discrete_actions=True,
         )
+        # env_north = ActionDTypeWrapper(env_north, np.float32)
+        # env_north = ActionRepeatWrapper(env_north, 2)
+        # env_north = action_scale.Wrapper(env_north, minimum=-1.0, maximum=+1.0)
         env_north = FrameStackWrapper(env_north, num_frames=frame_stack)
         env_north = ExtendedTimeStepWrapper(env_north)
         env_list.append(env_north)
@@ -326,11 +390,15 @@ def make_env(name, seed, frame_stack):
             task_name="reach_target",
             time_limit=10,
             seed=seed,
-            # top_camera=True,
+            top_camera=True,
             image_only_obs=True,
             maze_ori="South",
             reward_loc="Right",
+            discrete_actions=True,
         )
+        # env_south = ActionDTypeWrapper(env_south, np.float32)
+        # env_south = ActionRepeatWrapper(env_south, 2)
+        # env_south = action_scale.Wrapper(env_south, minimum=-1.0, maximum=+1.0)
         env_south = FrameStackWrapper(env_south, num_frames=frame_stack)
         env_south = ExtendedTimeStepWrapper(env_south)
         env_list.append(env_south)

@@ -269,7 +269,7 @@ class DQNAgent:
     def reset(self):
         pass
 
-    def act(self, obs, step):
+    def act(self, obs, step, eval_mode=False):
         obs = torch.as_tensor(obs, device=self.device).unsqueeze(0)
         if np.random.rand() > self.epsilon:
             with torch.no_grad():  # probably don't need this as it is done before act
