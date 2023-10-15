@@ -362,6 +362,9 @@ class DRQNAgent:
             next_obs = self.encoder(next_obs)
             next_obs = next_obs.reshape(B, S, -1)
 
+        if self.use_wandb:
+            metrics["batch_reward"] = rewards.mean().item()
+
         # Update Q network
         metrics.update(self.learn(obs, actions, rewards, discount, next_obs, step))
 

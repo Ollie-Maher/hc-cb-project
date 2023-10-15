@@ -81,17 +81,7 @@ class Workspace:
         )
 
         # create replay buffer
-        self.replay_loader = make_replay_loader(
-            self.replay_storage,
-            cfg.replay_buffer_size,
-            cfg.batch_size,
-            cfg.replay_buffer_num_workers,
-            False,
-            cfg.nstep,
-            cfg.discount,
-            cfg.sequence_length,
-        )
-        self._replay_iter = None
+        self.create_replay_buffer()
 
         # create video recorders
         self.video_recorder = VideoRecorder(
@@ -99,7 +89,7 @@ class Workspace:
             # render_size=64,
             # fps=10,
             # 0 for top down view, 2 for ego view
-            camera_id=0 if "quadruped" not in self.cfg.domain else 2,
+            camera_id=3 if "quadruped" not in self.cfg.domain else 2,
             use_wandb=self.cfg.use_wandb,
         )
         self.train_video_recorder = TrainVideoRecorder(
@@ -111,10 +101,15 @@ class Workspace:
         self.timer = utils.Timer()
         self._global_step = 0
         self._global_episode = 0
+        self._switch_step = 0
 
     @property
     def global_step(self):
         return self._global_step
+
+    @property
+    def switch_step(self):
+        return self._switch_step
 
     @property
     def global_episode(self):
@@ -123,6 +118,20 @@ class Workspace:
     @property
     def global_frame(self):
         return self.global_step * self.cfg.action_repeat
+
+    # @property
+    def create_replay_buffer(self):
+        self.replay_loader = make_replay_loader(
+            self.replay_storage,
+            self.cfg.replay_buffer_size,
+            self.cfg.batch_size,
+            self.cfg.replay_buffer_num_workers,
+            False,
+            self.cfg.nstep,
+            self.cfg.discount,
+            self.cfg.sequence_length,
+        )
+        self._replay_iter = None
 
     @property
     def replay_iter(self):
@@ -170,6 +179,7 @@ class Workspace:
         )
 
         episode_step, episode_reward = 0, 0
+        reward_switch = 1
         switch_env = False
         time_step = self.train_env.reset()
         # print(time_step)
@@ -198,22 +208,6 @@ class Workspace:
                         log("buffer_size", len(self.replay_storage))
                         log("step", self.global_step)
 
-                # reset env
-                # switch north vs south env after 600 episodes
-                # if self.global_episode % 300 == 0:
-                # alternate each trial between north and south
-                if self.global_episode % 1 == 0:
-                    # switch_env = not switch_env
-                    # random true or false
-                    switch_env = random.choice([True, False])
-                    # switch_env = False
-                    # switch_env = True  # set to True to switch env
-                    self.train_env = (
-                        self.train_envs[1] if switch_env else self.train_envs[0]
-                    )
-                    self.eval_env = (
-                        self.eval_envs[1] if switch_env else self.eval_envs[0]
-                    )
                 time_step = self.train_env.reset()
                 # print(time_step)
                 self.replay_storage.add(time_step, meta)
@@ -222,9 +216,36 @@ class Workspace:
                 # if self.global_frame in self.cfg.snapshots:
                 #     print("SAVING SNAPSHOT")
                 #     self.save_snapshot()
+                if episode_reward > 0 and reward_switch > 0:
+                    reward_switch += 1
+                else:
+                    reward_switch = 1
                 episode_step = 0
                 episode_reward = 0
                 self.agent.reset()  # reset agent, set rnn hidden to None
+                # reset env
+                # switch north vs south env after 600 episodes
+                # if self.global_episode % 100 == 0:
+                # alternate each trial between north and south
+                # if self.global_episode % 1 == 0:
+                # print("reward_switch", reward_switch)
+                if reward_switch >= 30:
+                    print("SWITCHING ENV")
+                    switch_env = not switch_env
+                    reward_switch = 1
+                    # random true or false
+                    # switch_env = random.choice([True, False])
+                    # switch_env = False
+                    # switch_env = True  # set to True to switch env
+                    self.replay_storage.reset()
+                    self.create_replay_buffer()
+                    self._switch_step = 0
+                    self.train_env = (
+                        self.train_envs[1] if switch_env else self.train_envs[0]
+                    )
+                    self.eval_env = (
+                        self.eval_envs[1] if switch_env else self.eval_envs[0]
+                    )
 
             # try to evaluate
             if eval_every_step(self.global_step):
@@ -240,7 +261,9 @@ class Workspace:
                 )
 
             # try to update the agent
-            if not seed_until_step(self.global_step):
+            if not seed_until_step(self.global_step) and (
+                not seed_until_step(self.switch_step)
+            ):
                 metrics = self.agent.update(self.replay_iter, self.global_step)
                 self.logger.log_metrics(metrics, self.global_frame, ty="train")
 
@@ -255,6 +278,7 @@ class Workspace:
             self.train_video_recorder.record(time_step.observation)
             episode_step += 1
             self._global_step += 1
+            self._switch_step += 1
 
     def save_snapshot(self):
         snapshot_dir = self.work_dir / Path(self.cfg.snapshot_dir)

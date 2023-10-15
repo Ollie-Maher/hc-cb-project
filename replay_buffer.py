@@ -42,6 +42,18 @@ class ReplayBufferStorage:
     def __len__(self):
         return self._num_transitions
 
+    def reset(self):
+        """
+        Reset the replay buffer, clearing all stored episodes and data.
+        """
+        self._num_episodes = 0
+        self._num_transitions = 0
+        self._current_episode = defaultdict(list)
+
+        # Delete episode files from disk
+        for fn in self._replay_dir.glob("*.npz"):
+            fn.unlink()
+
     def add(self, time_step, meta):
         for key, value in meta.items():
             self._current_episode[key].append(value)
@@ -108,6 +120,14 @@ class ReplayBuffer(IterableDataset):
     def _sample_episode(self):
         eps_fn = random.choice(self._episode_fns)
         return self._episodes[eps_fn]
+
+    def reset_memory(self):
+        """
+        Reset the memory of the replay buffer, clearing all data in memory.
+        """
+        self._size = 0
+        self._episode_fns = []
+        self._episodes = dict()
 
     def _store_episode(self, eps_fn):
         try:

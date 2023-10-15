@@ -374,7 +374,7 @@ def make_env(name, seed, frame_stack):
             task_name="reach_target",
             time_limit=10,
             seed=seed,
-            top_camera=True,
+            top_camera=False,
             image_only_obs=True,
             discrete_actions=True,
         )
@@ -390,7 +390,7 @@ def make_env(name, seed, frame_stack):
             task_name="reach_target",
             time_limit=10,
             seed=seed,
-            top_camera=True,
+            top_camera=False,
             image_only_obs=True,
             maze_ori="South",
             reward_loc="Right",
