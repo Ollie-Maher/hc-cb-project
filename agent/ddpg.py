@@ -231,8 +231,8 @@ class DrQV2Agent:
         self.stddev_clip = stddev_clip
 
         # models
-        # self.encoder = Encoder(obs_shape).to(device)
-        self.encoder = ResEncoder(obs_shape).to(self.device)
+        self.encoder = Encoder(obs_shape).to(device)
+        # self.encoder = ResEncoder(obs_shape).to(self.device)
         # print("action_shape", action_shape)
         self.actor = Actor(
             self.encoder.repr_dim, action_shape, feature_dim, hidden_dim
@@ -262,6 +262,9 @@ class DrQV2Agent:
         self.encoder.train(training)
         self.actor.train(training)
         self.critic.train(training)
+
+    def reset(self):
+        pass
 
     def act(self, obs, step, eval_mode):
         obs = torch.as_tensor(obs, device=self.device)

@@ -43,9 +43,11 @@ class Encoder(nn.Module):
         assert len(obs_shape) == 3
         # self.repr_dim = 32 * 35 * 35 # dm_control
         # self.repr_dim = 32 * 25 * 25 # minigrid partial obs
+        # self.repr_dim = 32 * 9 * 9  # minigrid partial obs
+        self.repr_dim = 32 * 1 * 1  # minigrid partial obs
         # self.repr_dim = 32 * 17 * 17  # minigrid full
         # self.repr_dim = 32 * 38 * 38  # atari
-        self.repr_dim = 32 * 29 * 29  # neuro_maze
+        # self.repr_dim = 32 * 29 * 29  # neuro_maze
 
         self.convnet = nn.Sequential(
             nn.Conv2d(obs_shape[0], 32, 2, stride=2),
@@ -87,7 +89,8 @@ class ResEncoder(nn.Module):
         self.repr_dim = 1024  # 1024
         self.image_channel = 3
         # x = torch.randn([32] + [9, 84, 84])
-        x = torch.randn([32] + [obs_shape[0], 64, 64])
+        # x = torch.randn([32] + [obs_shape[0], 64, 64])
+        x = torch.randn([32] + [obs_shape[0], 24, 24])
         with torch.no_grad():
             out_shape = self.forward_conv(x).shape
         self.out_dim = out_shape[1]
@@ -147,12 +150,13 @@ class RecurrentQNet(nn.Module):
         self.device = device
         self.hidden_dim = hidden_dim
         # +1 for the action size
-        self.gru = nn.GRU(state_dim + 1, hidden_dim, batch_first=True)
+        # self.gru = nn.GRU(state_dim + 1, hidden_dim, batch_first=True)
+        self.gru = nn.GRU(state_dim, hidden_dim, batch_first=True)
         self.fc = nn.Linear(hidden_dim, hidden_dim)
         self.out = nn.Linear(hidden_dim, action_dim)
 
-        self.phi = nn.Linear(hidden_dim, state_dim)
-        self.rew_model = nn.Linear(hidden_dim, 1)
+        # self.phi = nn.Linear(hidden_dim, state_dim)
+        # self.rew_model = nn.Linear(hidden_dim, 1)
 
         self.apply(utils.weight_init)  # why
 
@@ -169,11 +173,12 @@ class RecurrentQNet(nn.Module):
         out = F.relu(self.fc(gru_out))
         out = self.out(out)
 
-        # predict next state and action
-        pred_next_state = self.phi(gru_out)
-        pred_rew = self.rew_model(gru_out)
+        # # predict next state and action
+        # pred_next_state = self.phi(gru_out)
+        # pred_rew = self.rew_model(gru_out)
 
-        return out, gru_hidden, pred_next_state, pred_rew
+        # return out, gru_hidden, pred_next_state, pred_rew
+        return out, gru_hidden
 
     def init_hidden(self, batch_size):
         return torch.zeros(1, batch_size, self.hidden_dim, device=self.device)
@@ -202,7 +207,8 @@ class DRQNAgent:
         self.obs_type = obs_type
         self.obs_shape = obs_shape
         # self.action_dim = action_shape[0]
-        self.action_dim = 6
+        # self.action_dim = 6
+        self.action_dim = 3
         self.hidden_dim = hidden_dim
         self.lr = lr
         self.gamma = gamma
@@ -215,8 +221,8 @@ class DRQNAgent:
         self.gru_hidden = None
 
         if obs_type == "pixels":
-            # self.encoder = Encoder(obs_shape).to(self.device)
-            self.encoder = ResEncoder(obs_shape).to(self.device)
+            self.encoder = Encoder(obs_shape).to(self.device)
+            # self.encoder = ResEncoder(obs_shape).to(self.device)
             self.obs_dim = self.encoder.repr_dim
 
         else:
@@ -240,7 +246,7 @@ class DRQNAgent:
             self.encoder_optim = None
 
         # data augmentation
-        self.aug = RandomShiftsAug(pad=4)
+        # self.aug = RandomShiftsAug(pad=4)
 
         self.train()
         self.target_net.train()
@@ -260,12 +266,12 @@ class DRQNAgent:
                 features = self.encoder(obs)  # (1, 32*29*29)
                 # q_values, _ = self.q_net(features.unsqueeze(0))
                 # add action to features
-                feats = torch.cat(
-                    [features, torch.zeros(1, 1, device=self.device)], dim=-1
-                )
+                # feats = torch.cat(
+                #     [features, torch.zeros(1, 1, device=self.device)], dim=-1
+                # )
                 # print(f"feats shape: {feats.shape}")
-                q_values, self.gru_hidden, _, _ = self.q_net(
-                    feats.unsqueeze(0), self.gru_hidden
+                q_values, self.gru_hidden = self.q_net(
+                    features.unsqueeze(0), self.gru_hidden
                 )  # (1, 1, features_dim) adding extra dim for seq_len
                 # print(q_values.shape)
                 # q_values = self.q_net(obs)
@@ -277,50 +283,61 @@ class DRQNAgent:
 
     def learn(self, obs, actions, rewards, discount, next_obs, step):
         metrics = dict()
+        # if 1.0 in rewards:
+        #     breakpoint()
         # print(obs.shape, actions.shape, rewards.shape, next_obs.shape)
         # print(f"actions.unsqueeze {actions.unsqueeze(-1).shape}")
         # Update Q network
         # q_values = self.q_net(self.encoder(obs))
         # concatenate obs and actions
-        conc_obs = torch.cat([obs, actions.unsqueeze(-1)], dim=-1)
+        # conc_obs = torch.cat([obs, actions.unsqueeze(-1)], dim=-1)
         # print(f"conc_obs.shape {conc_obs.shape}")
-        q_values, _, pred_next_state, pred_rew = self.q_net(conc_obs)
+        # q_values, _, pred_next_state, pred_rew = self.q_net(conc_obs)
+        q_values, _ = self.q_net(obs)
         # print(q_values)
+        # print(q_values.shape)
+        # print(actions.shape, actions)
         # we unsqueeze(-1) the actions to get shape (batch_size, 1) which matchtes
         # rewards shape of (batch_size, 1). Unsqueeze is not required and alternatively
         # we can make sure rewards to be shape of (batch_size)
         q_values = q_values.gather(2, actions.unsqueeze(-1))
         # print(f"q_val {q_values}")
+        # print(q_values.shape)
 
         with torch.no_grad():
-            conc_next_obs = torch.cat([next_obs, actions.unsqueeze(-1)], dim=-1)
-            next_q_values, _, _, _ = self.target_net(conc_next_obs)
+            # conc_next_obs = torch.cat([next_obs, actions.unsqueeze(-1)], dim=-1)
+            # next_q_values, _, _, _ = self.target_net(conc_next_obs)
+            next_q_values, _ = self.target_net(next_obs)
             # next_q_values shape is [batch_size, action_dim], getting max(1)[0} will
             # give shape of [batch_size], hence unsqueeze(-1) to get [batch_size, 1]
             # which will match the shape rewards and q_values
             # next_q_values = next_q_values.max(1)[0].view(self.batch_size, 1)
-            # print(f"next_q_val {next_q_values.shape}")
+            # print(f"next_q_val {next_q_values}, {next_q_values.shape}")
             next_q_values = next_q_values.max(2)[0].unsqueeze(-1)
+            # print(f"next_q_val {next_q_values}, {next_q_values.shape}")
             # print(f"next_q_val {next_q_values.shape}")
             # next_q_values = next_q_values.max(1)[0]
 
             # discount will be zero for terminal states, so we don't need to worry to do
             # any masking
+            # print(f"discount {discount}, rewards {rewards}")
             next_q_values = rewards + self.gamma * discount * next_q_values
+            # if 1.0 in rewards:
+            #     breakpoint()
 
         # print(q_values.shape, next_q_values.shape)
-        q_loss = F.mse_loss(q_values, next_q_values)
+        loss = F.mse_loss(q_values, next_q_values)
 
-        pred_loss = F.mse_loss(pred_next_state, next_obs)
+        # pred_loss = F.mse_loss(pred_next_state, next_obs)
 
-        rew_loss = F.mse_loss(pred_rew, rewards)
+        # rew_loss = F.mse_loss(pred_rew, rewards)
 
-        loss = q_loss + pred_loss + rew_loss
+        # loss = q_loss + pred_loss + rew_loss
 
         if self.use_wandb:
-            metrics["q_loss"] = q_loss.item()
-            metrics["pred_loss"] = pred_loss.item()
-            metrics["rew_loss"] = rew_loss.item()
+            # metrics["q_loss"] = q_loss.item()
+            # metrics["pred_loss"] = pred_loss.item()
+            # metrics["rew_loss"] = rew_loss.item()
             metrics["loss"] = loss.item()
             metrics["q_val"] = q_values.mean().item()
             metrics["q_target"] = next_q_values.mean().item()
@@ -348,13 +365,16 @@ class DRQNAgent:
         obs, actions, rewards, discount, next_obs = utils.to_torch(batch, self.device)
         # print(obs.shape, actions.shape, rewards.shape, discount.shape, next_obs.shape)
         # actions = actions[:, 0]  # need to fix this in the replay buffer or wrapper
+        actions = actions.squeeze(-1)
         actions = actions.type(torch.int64)
 
         # augment, put batch and seq_len together
         B, S, C, H, W = obs.shape
-        obs = self.aug(obs.reshape(B * S, C, H, W).float())
-        next_obs = self.aug(next_obs.reshape(B * S, C, H, W).float())
-        # encode
+        # obs = self.aug(obs.reshape(B * S, C, H, W).float())
+        # next_obs = self.aug(next_obs.reshape(B * S, C, H, W).float())
+        obs = obs.reshape(B * S, C, H, W).float()
+        next_obs = next_obs.reshape(B * S, C, H, W).float()
+        # # encode
         obs = self.encoder(obs)
         obs = obs.reshape(B, S, -1)
         # print(obs.shape)

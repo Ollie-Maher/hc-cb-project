@@ -14,4 +14,4 @@ update_every_steps: 2
 use_wandb: ${use_wandb}
 nstep: 1
 sequence_length: 25
-epsilon: 0.4
+epsilon: 0.1

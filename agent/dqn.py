@@ -42,10 +42,12 @@ class Encoder(nn.Module):
 
         assert len(obs_shape) == 3
         # self.repr_dim = 32 * 35 * 35 # dm_control
-        # self.repr_dim = 32 * 25 * 25 # minigrid partial obs
+        # self.repr_dim = 32 * 25 * 25  # minigrid partial obs
+        # self.repr_dim = 32 * 7 * 7  # minigrid partial obs 3
+        self.repr_dim = 32 * 9 * 9  # minigrid partial obs 3
         # self.repr_dim = 32 * 17 * 17  # minigrid full
         # self.repr_dim = 32 * 38 * 38  # atari
-        self.repr_dim = 32 * 29 * 29  # neuro_maze
+        # self.repr_dim = 32 * 29 * 29  # neuro_maze
 
         self.convnet = nn.Sequential(
             nn.Conv2d(obs_shape[0], 32, 2, stride=2),
@@ -87,8 +89,10 @@ class ResEncoder(nn.Module):
         self.model.fc = nn.Identity()
         self.repr_dim = 1024
         self.image_channel = 3
+        # self.image_channel = 9
         # x = torch.randn([32] + [9, 84, 84])
-        x = torch.randn([32] + [obs_shape[0], 64, 64])
+        # x = torch.randn([32] + [obs_shape[0], 64, 64])  # neuromaze
+        x = torch.randn([32] + [obs_shape[0], 24, 24])  # minigrid
         with torch.no_grad():
             out_shape = self.forward_conv(x).shape
         self.out_dim = out_shape[1]
@@ -149,9 +153,10 @@ class QNetEncoder(nn.Module):
         assert len(obs_shape) == 3
         # self.repr_dim = 32 * 35 * 35 # dm_control
         # self.repr_dim = 32 * 25 * 25 # minigrid partial obs
+        self.repr_dim = 32 * 9 * 9  # minigrid partial obs 3
         # self.repr_dim = 32 * 17 * 17  # minigrid full
         # self.repr_dim = 32 * 39 * 39  # atari
-        self.repr_dim = 32 * 29 * 29  # neuro_maze
+        # self.repr_dim = 32 * 29 * 29  # neuro_maze
 
         self.convnet = nn.Sequential(
             nn.Conv2d(obs_shape[0], 32, 2, stride=2),
@@ -213,7 +218,8 @@ class DQNAgent:
         self.obs_type = obs_type
         self.obs_shape = obs_shape
         # self.action_dim = action_shape[0]
-        self.action_dim = 6
+        # self.action_dim = 6
+        self.action_dim = 3
         self.hidden_dim = hidden_dim
         self.lr = lr
         self.gamma = gamma
@@ -225,8 +231,8 @@ class DQNAgent:
         self.epsilon = epsilon
 
         if obs_type == "pixels":
-            # self.encoder = Encoder(obs_shape).to(self.device)
-            self.encoder = ResEncoder(obs_shape).to(self.device)
+            self.encoder = Encoder(obs_shape).to(self.device)
+            # self.encoder = ResEncoder(obs_shape).to(self.device)
             self.obs_dim = self.encoder.repr_dim
 
         else:
@@ -342,6 +348,7 @@ class DQNAgent:
         obs = obs.squeeze(1)
         next_obs = next_obs.squeeze(1)
         actions = actions.squeeze(1)
+        actions = actions[:, 0]  # need to fix this in the replay buffer or wrapper
         # actions = actions.unsqueeze(-1)
         # print(actions.shape)
         rewards = rewards.squeeze(1)

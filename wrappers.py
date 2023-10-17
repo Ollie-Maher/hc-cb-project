@@ -266,11 +266,11 @@ class Minigrid(dm_env.Environment):
         self.env = env
         wrapped_obs_spec = self.env.observation_space["image"]
         self._action_spec = dm_env.specs.BoundedArray(
-            shape=(env.action_space.n,),
+            shape=(env.action_space.n - 6,),
             # shape=(1,),
             dtype=np.int64,
             minimum=0,
-            maximum=env.action_space.n - 1,
+            maximum=env.action_space.n - 5,  # use only 3 actions instead of 7
             name="action",
         )
         self._observation_spec = dm_env.specs.BoundedArray(
@@ -338,16 +338,49 @@ def make_env(name, seed, frame_stack):
         from minigrid.wrappers import (RGBImgObsWrapper,
                                        RGBImgPartialObsWrapper, gym)
 
-        # env = Minigrid(name)
-        # env = gym.make(name, render_mode="rgb_array", max_steps=10)
-        env = gym.make(name, render_mode="rgb_array")
-        # env = RGBImgPartialObsWrapper(env)  # returns (56,56,3) image
-        env = RGBImgObsWrapper(env)  # returns (40,40,3) image
-        print(env.render_mode)
-        env = Minigrid(env)
-        # env = ExtendedTimeStepWrapper(env)
-        # env = FrameStackWrapper(env, 3)
-        print("env created")
+        # # env = Minigrid(name)
+        # # env = gym.make(name, render_mode="rgb_array", max_steps=10)
+        # env = gym.make(name, render_mode="rgb_array", agent_view_size=3)
+        # env = RGBImgPartialObsWrapper(env)  # , tile_size=3)  # returns (56,56,3) image
+        # # env = RGBImgObsWrapper(env)  # returns (40,40,3) image
+        # print(env.render_mode)
+        # env = Minigrid(env)
+        # # env = ExtendedTimeStepWrapper(env)
+        # # env = FrameStackWrapper(env, 3)
+        # print("env created")
+        env_list = []
+
+        env_north = gym.make(
+            name, env_ns="North", render_mode="rgb_array", agent_view_size=3
+        )
+        env_north = RGBImgPartialObsWrapper(
+            env_north, tile_size=3
+        )  # , tile_size=3)  # returns (56,56,3) image
+        # env = RGBImgObsWrapper(env)  # returns (40,40,3) image
+        env_north = Minigrid(env_north)
+        # env_north = ActionDTypeWrapper(env_north, np.float32)
+        # env_north = ActionRepeatWrapper(env_north, 2)
+        # env_north = action_scale.Wrapper(env_north, minimum=-1.0, maximum=+1.0)
+        env_north = FrameStackWrapper(env_north, num_frames=frame_stack)
+        env_north = ExtendedTimeStepWrapper(env_north)
+        env_list.append(env_north)
+
+        env_south = gym.make(
+            name, env_ns="South", render_mode="rgb_array", agent_view_size=3
+        )
+        env_south = RGBImgPartialObsWrapper(
+            env_south, tile_size=3
+        )  # , tile_size=3)  # returns (56,56,3) image
+        # env = RGBImgObsWrapper(env)  # returns (40,40,3) image
+        env_south = Minigrid(env_south)
+        # env_south = ActionDTypeWrapper(env_south, np.float32)
+        # env_south = ActionRepeatWrapper(env_south, 2)
+        # env_south = action_scale.Wrapper(env_south, minimum=-1.0, maximum=+1.0)
+        env_south = FrameStackWrapper(env_south, num_frames=frame_stack)
+        env_south = ExtendedTimeStepWrapper(env_south)
+        env_list.append(env_south)
+
+        return env_list
     elif suite == "atari":
         # import gymnasium
         import gymnasium as gym
@@ -374,7 +407,7 @@ def make_env(name, seed, frame_stack):
             task_name="reach_target",
             time_limit=10,
             seed=seed,
-            top_camera=False,
+            top_camera=True,
             image_only_obs=True,
             discrete_actions=True,
         )
@@ -390,7 +423,7 @@ def make_env(name, seed, frame_stack):
             task_name="reach_target",
             time_limit=10,
             seed=seed,
-            top_camera=False,
+            top_camera=True,
             image_only_obs=True,
             maze_ori="South",
             reward_loc="Right",

@@ -45,8 +45,10 @@ class Workspace:
         self.logger = Logger(self.work_dir, use_tb=cfg.use_tb, use_wandb=cfg.use_wandb)
 
         self.train_envs = make_env(cfg.task, cfg.seed, cfg.frame_stack)
+        # self.train_env = make_env(cfg.task, cfg.seed, cfg.frame_stack)
         self.train_env = self.train_envs[0]
         self.eval_envs = make_env(cfg.task, cfg.seed, cfg.frame_stack)
+        # self.eval_env = make_env(cfg.task, cfg.seed, cfg.frame_stack)
         self.eval_env = self.eval_envs[0]
         # self.eval_env = self.train_env
 
@@ -88,8 +90,8 @@ class Workspace:
             self.work_dir if cfg.save_video else None,
             # render_size=64,
             # fps=10,
-            # 0 for top down view, 2 for ego view
-            camera_id=3 if "quadruped" not in self.cfg.domain else 2,
+            # 0 for top down view, 3 for ego view
+            camera_id=0 if "quadruped" not in self.cfg.domain else 2,
             use_wandb=self.cfg.use_wandb,
         )
         self.train_video_recorder = TrainVideoRecorder(
@@ -208,6 +210,30 @@ class Workspace:
                         log("buffer_size", len(self.replay_storage))
                         log("step", self.global_step)
 
+                # reset env
+                # switch north vs south env after 600 episodes
+                # # if self.global_episode % 100 == 0:
+                # # alternate each trial between north and south
+                if self.global_episode % 1 == 0:
+                    # # print("reward_switch", reward_switch)
+                    # if reward_switch >= 30:
+                    # print("SWITCHING ENV")
+                    # switch_env = not switch_env
+                    reward_switch = 1
+                    # random true or false
+                    switch_env = random.choice([True, False])
+                    # switch_env = False
+                    # switch_env = True  # set to True to switch env
+                    # self.replay_storage.reset()
+                    # self.create_replay_buffer()
+                    # self._switch_step = 0
+                    self.train_env = (
+                        self.train_envs[1] if switch_env else self.train_envs[0]
+                    )
+                    self.eval_env = (
+                        self.eval_envs[1] if switch_env else self.eval_envs[0]
+                    )
+
                 time_step = self.train_env.reset()
                 # print(time_step)
                 self.replay_storage.add(time_step, meta)
@@ -216,36 +242,13 @@ class Workspace:
                 # if self.global_frame in self.cfg.snapshots:
                 #     print("SAVING SNAPSHOT")
                 #     self.save_snapshot()
-                if episode_reward > 0 and reward_switch > 0:
-                    reward_switch += 1
-                else:
-                    reward_switch = 1
+                # if episode_reward > 0 and reward_switch > 0:
+                #     reward_switch += 1
+                # else:
+                #     reward_switch = 1
                 episode_step = 0
                 episode_reward = 0
                 self.agent.reset()  # reset agent, set rnn hidden to None
-                # reset env
-                # switch north vs south env after 600 episodes
-                # if self.global_episode % 100 == 0:
-                # alternate each trial between north and south
-                # if self.global_episode % 1 == 0:
-                # print("reward_switch", reward_switch)
-                if reward_switch >= 30:
-                    print("SWITCHING ENV")
-                    switch_env = not switch_env
-                    reward_switch = 1
-                    # random true or false
-                    # switch_env = random.choice([True, False])
-                    # switch_env = False
-                    # switch_env = True  # set to True to switch env
-                    self.replay_storage.reset()
-                    self.create_replay_buffer()
-                    self._switch_step = 0
-                    self.train_env = (
-                        self.train_envs[1] if switch_env else self.train_envs[0]
-                    )
-                    self.eval_env = (
-                        self.eval_envs[1] if switch_env else self.eval_envs[0]
-                    )
 
             # try to evaluate
             if eval_every_step(self.global_step):
