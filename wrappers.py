@@ -354,7 +354,7 @@ def make_env(name, seed, frame_stack):
             name, env_ns="North", render_mode="rgb_array", agent_view_size=3
         )
         env_north = RGBImgPartialObsWrapper(
-            env_north, tile_size=3
+            env_north, tile_size=8
         )  # , tile_size=3)  # returns (56,56,3) image
         # env = RGBImgObsWrapper(env)  # returns (40,40,3) image
         env_north = Minigrid(env_north)
@@ -369,7 +369,7 @@ def make_env(name, seed, frame_stack):
             name, env_ns="South", render_mode="rgb_array", agent_view_size=3
         )
         env_south = RGBImgPartialObsWrapper(
-            env_south, tile_size=3
+            env_south, tile_size=8
         )  # , tile_size=3)  # returns (56,56,3) image
         # env = RGBImgObsWrapper(env)  # returns (40,40,3) image
         env_south = Minigrid(env_south)

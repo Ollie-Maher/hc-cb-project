@@ -43,8 +43,8 @@ class Encoder(nn.Module):
         assert len(obs_shape) == 3
         # self.repr_dim = 32 * 35 * 35 # dm_control
         # self.repr_dim = 32 * 25 * 25 # minigrid partial obs
-        # self.repr_dim = 32 * 9 * 9  # minigrid partial obs
-        self.repr_dim = 32 * 1 * 1  # minigrid partial obs
+        self.repr_dim = 32 * 9 * 9  # minigrid partial obs
+        # self.repr_dim = 32 * 1 * 1  # minigrid partial obs
         # self.repr_dim = 32 * 17 * 17  # minigrid full
         # self.repr_dim = 32 * 38 * 38  # atari
         # self.repr_dim = 32 * 29 * 29  # neuro_maze
@@ -151,6 +151,7 @@ class RecurrentQNet(nn.Module):
         self.hidden_dim = hidden_dim
         # +1 for the action size
         # self.gru = nn.GRU(state_dim + 1, hidden_dim, batch_first=True)
+        # self.fc = nn.Linear(state_dim, hidden_dim)
         self.gru = nn.GRU(state_dim, hidden_dim, batch_first=True)
         self.fc = nn.Linear(hidden_dim, hidden_dim)
         self.out = nn.Linear(hidden_dim, action_dim)
@@ -160,7 +161,7 @@ class RecurrentQNet(nn.Module):
 
         self.apply(utils.weight_init)  # why
 
-    def forward(self, x, action=None, hidden=None):
+    def forward(self, x, hidden=None):
         # x shape (batch_size, seq_len, state_dim)
         batch_size = x.shape[0]  # obs.size(0)
         hidden = self.init_hidden(batch_size) if hidden is None else hidden
@@ -168,6 +169,8 @@ class RecurrentQNet(nn.Module):
         # concatenate x and action [batch_size, seq_len, state_dim + action_dim]
         # if action is not None:
         #     x = torch.cat([x, action], dim=-1)
+
+        # x = self.fc(x)
 
         gru_out, gru_hidden = self.gru(x, hidden)
         out = F.relu(self.fc(gru_out))
@@ -235,6 +238,13 @@ class DRQNAgent:
         self.target_net = RecurrentQNet(
             self.encoder.repr_dim, self.hidden_dim, self.action_dim, self.device
         ).to(self.device)
+        # repr_dim = 9 * 9 * 3
+        # self.q_net = RecurrentQNet(
+        #     repr_dim, self.hidden_dim, self.action_dim, self.device
+        # ).to(self.device)
+        # self.target_net = RecurrentQNet(
+        #     repr_dim, self.hidden_dim, self.action_dim, self.device
+        # ).to(self.device)
         self.target_net.load_state_dict(self.q_net.state_dict())
 
         # optimizers
@@ -264,6 +274,9 @@ class DRQNAgent:
         if np.random.rand() > self.epsilon:
             with torch.no_grad():  # probably don't need this as it is done before act
                 features = self.encoder(obs)  # (1, 32*29*29)
+                # flatten obs
+                # features = obs.view(obs.size(0), -1)
+                # print(f"features shape: {features.shape}")
                 # q_values, _ = self.q_net(features.unsqueeze(0))
                 # add action to features
                 # feats = torch.cat(
@@ -370,6 +383,10 @@ class DRQNAgent:
 
         # augment, put batch and seq_len together
         B, S, C, H, W = obs.shape
+        # obs = obs.view(B, S, C * H * W)
+        # obs = obs.reshape(B, S, C * H * W)
+        # next_obs = next_obs.reshape(B, S, C * H * W)
+
         # obs = self.aug(obs.reshape(B * S, C, H, W).float())
         # next_obs = self.aug(next_obs.reshape(B * S, C, H, W).float())
         obs = obs.reshape(B * S, C, H, W).float()
