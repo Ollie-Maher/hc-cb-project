@@ -53,8 +53,6 @@ class Workspace:
         # self.eval_env = self.train_env
 
         # create agent
-        # print(self.train_env.observation_space)
-        # print(self.train_env.action_space)
         print(self.train_env.observation_spec().name)
         print(self.train_env.observation_spec())
         print(self.train_env.action_spec())
@@ -184,7 +182,6 @@ class Workspace:
         reward_switch = 1
         switch_env = False
         time_step = self.train_env.reset()
-        # print(time_step)
         # meta = self.agent.init_meta()
         meta = OrderedDict()
         self.replay_storage.add(time_step, meta)
@@ -212,18 +209,17 @@ class Workspace:
 
                 # reset env
                 # switch north vs south env after 600 episodes
-                # # if self.global_episode % 100 == 0:
+                # if self.global_episode % 100 == 0:
                 # # alternate each trial between north and south
                 if self.global_episode % 1 == 0:
-                    # # print("reward_switch", reward_switch)
                     # if reward_switch >= 30:
                     # print("SWITCHING ENV")
                     # switch_env = not switch_env
                     reward_switch = 1
-                    # random true or false
                     switch_env = random.choice([True, False])
                     # switch_env = False
                     # switch_env = True  # set to True to switch env
+
                     # self.replay_storage.reset()
                     # self.create_replay_buffer()
                     # self._switch_step = 0
@@ -235,13 +231,13 @@ class Workspace:
                     )
 
                 time_step = self.train_env.reset()
-                # print(time_step)
                 self.replay_storage.add(time_step, meta)
                 self.train_video_recorder.init(time_step.observation)
                 # # try to save snapshot
                 # if self.global_frame in self.cfg.snapshots:
                 #     print("SAVING SNAPSHOT")
                 #     self.save_snapshot()
+
                 # if episode_reward > 0 and reward_switch > 0:
                 #     reward_switch += 1
                 # else:
@@ -271,10 +267,7 @@ class Workspace:
                 self.logger.log_metrics(metrics, self.global_frame, ty="train")
 
             # take env step
-            # print("action", action)
             time_step = self.train_env.step(action)
-            # print(time_step.step_type, time_step.last())
-            # print(episode_step)
             # self.train_env.render()
             episode_reward += time_step.reward
             self.replay_storage.add(time_step, meta)
