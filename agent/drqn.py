@@ -89,8 +89,9 @@ class ResEncoder(nn.Module):
         self.repr_dim = 1024  # 1024
         self.image_channel = 3
         # x = torch.randn([32] + [9, 84, 84])
-        # x = torch.randn([32] + [obs_shape[0], 64, 64])# neuro_maze
+        # x = torch.randn([32] + [obs_shape[0], 64, 64])  # neuro_maze
         x = torch.randn([32] + [obs_shape[0], 24, 24])  # minigrid
+        # x = torch.randn([32] + [obs_shape[0], 65, 65])  # minigrid
         with torch.no_grad():
             out_shape = self.forward_conv(x).shape
         self.out_dim = out_shape[1]
@@ -149,6 +150,9 @@ class RecurrentQNet(nn.Module):
         # if action is not None:
         #     x = torch.cat([x, action], dim=-1)
 
+        # with torch.no_grad():
+        # breakpoint()
+        # self.gru.requires_grad_(False)
         gru_out, gru_hidden = self.gru(x, hidden)
         out = F.relu(self.fc(gru_out))
         out = self.out(out)
@@ -265,6 +269,7 @@ class DRQNAgent:
         # concatenate obs and actions
         # conc_obs = torch.cat([obs, actions.unsqueeze(-1)], dim=-1)
         # q_values, _, pred_next_state, pred_rew = self.q_net(conc_obs)
+        # breakpoint()
         q_values, _ = self.q_net(obs)
 
         # we unsqueeze(-1) the actions to get shape (batch_size, 1) which matchtes

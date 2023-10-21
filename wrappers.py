@@ -349,12 +349,17 @@ def make_env(name, seed, frame_stack):
         # # env = FrameStackWrapper(env, 3)
         # print("env created")
         env_list = []
+        agent_view_size = 3
+        tile_size = 8
 
         env_north = gym.make(
-            name, env_ns="North", render_mode="rgb_array", agent_view_size=3
+            name,
+            env_ns="North",
+            render_mode="rgb_array",
+            agent_view_size=agent_view_size,
         )
         env_north = RGBImgPartialObsWrapper(
-            env_north, tile_size=8
+            env_north, tile_size=tile_size
         )  # , tile_size=3)  # returns (56,56,3) image
         # env = RGBImgObsWrapper(env)  # returns (40,40,3) image
         env_north = Minigrid(env_north)
@@ -366,10 +371,13 @@ def make_env(name, seed, frame_stack):
         env_list.append(env_north)
 
         env_south = gym.make(
-            name, env_ns="South", render_mode="rgb_array", agent_view_size=3
+            name,
+            env_ns="South",
+            render_mode="rgb_array",
+            agent_view_size=agent_view_size,
         )
         env_south = RGBImgPartialObsWrapper(
-            env_south, tile_size=8
+            env_south, tile_size=tile_size
         )  # , tile_size=3)  # returns (56,56,3) image
         # env = RGBImgObsWrapper(env)  # returns (40,40,3) image
         env_south = Minigrid(env_south)
@@ -407,7 +415,7 @@ def make_env(name, seed, frame_stack):
             task_name="reach_target",
             time_limit=10,
             seed=seed,
-            top_camera=True,
+            top_camera=False,
             image_only_obs=True,
             discrete_actions=True,
         )
@@ -423,7 +431,7 @@ def make_env(name, seed, frame_stack):
             task_name="reach_target",
             time_limit=10,
             seed=seed,
-            top_camera=True,
+            top_camera=False,
             image_only_obs=True,
             maze_ori="South",
             reward_loc="Right",

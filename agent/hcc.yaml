@@ -1,6 +1,6 @@
 # @package agent
-_target_: agent.drqn.DRQNAgent
-name: drqn
+_target_: agent.hcc.HCCAgent
+name: hcc
 obs_type: ??? # to be specified later
 obs_shape: ??? # to be specified later
 action_shape: ??? # to be specified later
@@ -13,5 +13,5 @@ tau: 0.01
 update_every_steps: 2
 use_wandb: ${use_wandb}
 nstep: 1
-sequence_length: 100
+sequence_length: 10
 epsilon: 0.1

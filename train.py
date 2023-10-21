@@ -89,7 +89,7 @@ class Workspace:
             # render_size=64,
             # fps=10,
             # 0 for top down view, 3 for ego view
-            camera_id=0 if "quadruped" not in self.cfg.domain else 2,
+            camera_id=3 if "quadruped" not in self.cfg.domain else 2,
             use_wandb=self.cfg.use_wandb,
         )
         self.train_video_recorder = TrainVideoRecorder(
@@ -210,7 +210,7 @@ class Workspace:
                 # reset env
                 # switch north vs south env after 600 episodes
                 # if self.global_episode % 100 == 0:
-                # # alternate each trial between north and south
+                # alternate each trial between north and south
                 if self.global_episode % 1 == 0:
                     # if reward_switch >= 30:
                     # print("SWITCHING ENV")
