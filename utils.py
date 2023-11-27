@@ -3,10 +3,81 @@ import re
 import time
 
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 from torch import distributions as pyd
 from torch.distributions.utils import _standard_normal
+
+
+class Activations(object):
+    """Class to record and save model activations"""
+
+    def __init__(self, root_dir):
+        if root_dir is not None:
+            self.save_dir = root_dir / "activations"
+            self.save_dir.mkdir(exist_ok=True)
+        else:
+            self.save_dir = None
+
+        self.columns = [f"neuron_{i}" for i in range(512)] + [
+            "step",
+            "episode",
+            "reward",
+            "env_id",
+        ]
+        self.df = pd.DataFrame(columns=self.columns)
+        self.lst = []  # list to store tensors tmp because df is not efficient
+
+    def add_activations(self, acts, step, episode, reward, env_id):
+        # acts: (1, 1, 512)
+        acts = acts.squeeze(0).squeeze(0).cpu().numpy()
+        # tensor_row shape (516,)
+        tensor_row = np.concatenate([acts, [step, episode, reward, env_id]])
+        self.lst.append(tensor_row)
+
+    def save(self):
+        # print("Saving activations...")
+        new_df = pd.DataFrame(self.lst, columns=self.columns)
+        self.df = pd.concat([self.df, new_df], ignore_index=True)
+        self.df.to_csv(self.save_dir / "ca3.csv", index=False)
+        self.lst = []
+
+
+class AgentPos(object):
+    """Class to record and save agent position"""
+
+    def __init__(self, root_dir):
+        if root_dir is not None:
+            self.save_dir = root_dir / "locations"
+            self.save_dir.mkdir(exist_ok=True)
+        else:
+            self.save_dir = None
+
+        self.columns = [
+            "position_x",
+            "position_y",
+            "step",
+            "episode",
+            "reward",
+            "env_id",
+        ]
+        self.df = pd.DataFrame(columns=self.columns)
+        self.lst = []  # list to store tensors tmp because df is not efficient
+
+    def record_loc(self, agent_pos, step, episode, reward, env_id):
+        # tensor_row shape (6,)
+        tensor_row = np.array(
+            [agent_pos[0], agent_pos[1], step, episode, reward, env_id]
+        )
+        self.lst.append(tensor_row)
+
+    def save(self):
+        # print("Saving activations...")
+        new_df = pd.DataFrame(self.lst, columns=self.columns)
+        self.df = pd.concat([self.df, new_df], ignore_index=True)
+        self.df.to_csv(self.save_dir / "agent_pos.csv", index=False)
+        self.lst = []
 
 
 class eval_mode:
@@ -40,6 +111,13 @@ def soft_update_params(net, target_net, tau):
 
 def hard_update_params(net, target_net):
     for param, target_param in zip(net.parameters(), target_net.parameters()):
+        # for param, target_param in zip(net.state_dict(), target_net.state_dict()):
+        # print(param, "\t", net.state_dict()[param].size())
+        # print(target_param, "\t", target_net.state_dict()[target_param].size())
+        # target_param[1].data.copy_(param[1].data)
+        # print(param)
+        # print(param.data)
+        # input(...)
         target_param.data.copy_(param.data)
 
 

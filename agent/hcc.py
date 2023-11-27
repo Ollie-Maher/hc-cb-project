@@ -178,24 +178,31 @@ class RecurrentQNet(nn.Module):
             self.gru.requires_grad_(False)
             # self.gru.weight_ih_l0.requires_grad_(True)
             gru_out, hidden = self.gru(gru_input, hidden)
+            # gru_out goes to fc (ca1)
+            # ca1_out = F.relu(self.fc(gru_out))
+            # pred = self.cerebellum_net(ca1_out)
             pred = self.cerebellum_net(hidden)
             pred = pred.transpose(0, 1)
+            # add random noise to the cerebellum prediction
+            # noise = torch.randn_like(pred) * 1.0 + 0
+            # pred = pred + noise
             if t < sequence_length - 1:
                 # gru_input = torch.cat([x[:, t + 1 : t + 2, :], hidden], dim=2)
                 gru_input = torch.cat([x[:, t + 1 : t + 2, :], pred], dim=2)
             # gru_input = x[:, t + 1 : t + 2, :]
             out[:, t : t + 1, :] = gru_out
+            # out[:, t : t + 1, :] = ca1_out
             cb_preds[:, t : t + 1, :] = pred
 
-        out = F.relu(self.fc(out))
-        out = self.out(out)
+        ca1_out = F.relu(self.fc(out))
+        out = self.out(ca1_out)
         # breakpoint()
 
         # # predict next state and action
         # pred_next_state = self.phi(gru_out)
         # pred_rew = self.rew_model(gru_out)
 
-        return out, cb_preds, hidden
+        return out, cb_preds, hidden, ca1_out
 
     def init_hidden(self, batch_size):
         return torch.zeros(1, batch_size, self.hidden_dim, device=self.device)
@@ -278,6 +285,11 @@ class HCCAgent:
         self.encoder.train(training)
         self.q_net.train(training)
 
+    def init_from(self, other):
+        utils.hard_update_params(other.encoder, self.encoder)
+        utils.hard_update_params(other.q_net, self.q_net)
+        utils.hard_update_params(other.target_net, self.target_net)
+
     def reset(self):
         self.gru_hidden = None
         self.cereb_pred = None
@@ -287,28 +299,30 @@ class HCCAgent:
         if np.random.rand() > self.epsilon:
             with torch.no_grad():  # probably don't need this as it is done before act
                 features = self.encoder(obs)  # (1, 32*29*29)
-                q_values, self.cereb_pred, self.gru_hidden = self.q_net(
+                q_values, self.cereb_pred, self.gru_hidden, ca1_out = self.q_net(
                     x=features.unsqueeze(0),
                     hidden=self.gru_hidden,
                     cereb_pred=self.cereb_pred,
                     # cereb_pred=None,
                 )
             action = q_values.argmax().item()
+            return action, q_values, self.cereb_pred, self.gru_hidden, ca1_out, features
         else:
             action = np.random.randint(self.action_dim)
+            return action, None, None, None, None, None
 
-        return action
+        # return action
 
     def learn(self, obs, actions, rewards, discount, next_obs, step):
         metrics = dict()
         # print(obs.shape, actions.shape, rewards.shape, next_obs.shape)
         # Update Q network
         # breakpoint()
-        q_values, cb_preds, _ = self.q_net(obs)
+        q_values, cb_preds, _, _ = self.q_net(obs)
         q_values = q_values.gather(2, actions.unsqueeze(-1))
 
         with torch.no_grad():
-            next_q_values, _, _ = self.target_net(next_obs)
+            next_q_values, _, _, _ = self.target_net(next_obs)
             # next_q_values shape is [batch_size, action_dim], getting max(1)[0} will
             # give shape of [batch_size], hence unsqueeze(-1) to get [batch_size, 1]
             # which will match the shape rewards and q_values
@@ -339,14 +353,16 @@ class HCCAgent:
             if param.grad is not None:
                 param.grad.data.clamp_(-1, 1)
         self.q_net_optim.step()
-        if self.encoder_optim is not None:
-            self.encoder_optim.step()
+        # if self.encoder_optim is not None:
+        #     self.encoder_optim.step()
 
         return metrics
 
-    def update(self, replay_iter, step):
+    def update(self, replay_iter, step, test=False):
         metrics = dict()
 
+        if test:
+            return metrics
         if step % self.update_every_steps != 0:
             return metrics
 

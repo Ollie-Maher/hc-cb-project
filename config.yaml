@@ -4,26 +4,28 @@ defaults:
 
 # task settings
 # task: MiniGrid-TMaze-7x7-v0
-# task: MiniGrid-Empty-5x5-v0
+# task: MiniGrid-OpenMaze-7x7-v0
 # task: MiniGrid-LavaGapS5-v0
 # task: "atari-ALE/Pong-v5"
 task: "NeuroMaze-TMaze" 
-domain: cheetah
+domain: neuromaze
 obs_type: pixels # [states | pixels]
 frame_stack: 1 # only works if obs_type=pixels
 action_repeat: 1 # set to 2 for pixels
 discount: 0.99
 # train settings
 num_train_frames: 12000010
-num_seed_frames: 2000 # 4000
+num_seed_frames: 2000 # 2000, 4000
 # eval
 eval_every_frames: 10000
 num_eval_episodes: 10 # 10
 # snapshot
-snapshots: [100000, 500000, 1000000, 2000000] # 
+snapshots: [200, 500, 1000, 2000, 4000, 8000, 10000] # 
 snapshot_dir: ../../../pretrained_models/${obs_type}/${domain}/${agent.name}/${experiment}
+snapshot_load_dir: ../../../pretrained_models/
+snapshot_ts: 0 #10000
 # replay buffer
-replay_buffer_size: 1_000_000
+replay_buffer_size: 1_000_000 #1_000_000
 replay_buffer_num_workers: 4
 sequence_length: ${agent.sequence_length}
 nstep: ${agent.nstep}
@@ -33,6 +35,7 @@ seed: 1
 device: cuda
 save_video: true
 save_train_video: false
+save_stats: false
 use_tb: false
 use_wandb: false
 # experiment

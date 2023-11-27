@@ -154,15 +154,15 @@ class RecurrentQNet(nn.Module):
         # breakpoint()
         # self.gru.requires_grad_(False)
         gru_out, gru_hidden = self.gru(x, hidden)
-        out = F.relu(self.fc(gru_out))
-        out = self.out(out)
+        ca1_out = F.relu(self.fc(gru_out))
+        out = self.out(ca1_out)
 
         # # predict next state and action
         # pred_next_state = self.phi(gru_out)
         # pred_rew = self.rew_model(gru_out)
 
         # return out, gru_hidden, pred_next_state, pred_rew
-        return out, gru_hidden
+        return out, gru_hidden, ca1_out
 
     def init_hidden(self, batch_size):
         return torch.zeros(1, batch_size, self.hidden_dim, device=self.device)
@@ -240,6 +240,11 @@ class DRQNAgent:
         self.encoder.train(training)
         self.q_net.train(training)
 
+    def init_from(self, other):
+        utils.hard_update_params(other.encoder, self.encoder)
+        utils.hard_update_params(other.q_net, self.q_net)
+        utils.hard_update_params(other.target_net, self.target_net)
+
     def reset(self):
         self.gru_hidden = None
 
@@ -252,14 +257,16 @@ class DRQNAgent:
                 # feats = torch.cat(
                 #     [features, torch.zeros(1, 1, device=self.device)], dim=-1
                 # )
-                q_values, self.gru_hidden = self.q_net(
+                q_values, self.gru_hidden, ca1_out = self.q_net(
                     features.unsqueeze(0), self.gru_hidden
                 )  # (1, 1, features_dim) adding extra dim for seq_len
             action = q_values.argmax().item()
+            return action, q_values, None, self.gru_hidden, ca1_out, features
         else:
             action = np.random.randint(self.action_dim)
+            return action, None, None, None, None, None
 
-        return action
+        # return action
 
     def learn(self, obs, actions, rewards, discount, next_obs, step):
         metrics = dict()
@@ -270,7 +277,7 @@ class DRQNAgent:
         # conc_obs = torch.cat([obs, actions.unsqueeze(-1)], dim=-1)
         # q_values, _, pred_next_state, pred_rew = self.q_net(conc_obs)
         # breakpoint()
-        q_values, _ = self.q_net(obs)
+        q_values, _, _ = self.q_net(obs)
 
         # we unsqueeze(-1) the actions to get shape (batch_size, 1) which matchtes
         # rewards shape of (batch_size, 1). Unsqueeze is not required and alternatively
@@ -280,7 +287,7 @@ class DRQNAgent:
         with torch.no_grad():
             # conc_next_obs = torch.cat([next_obs, actions.unsqueeze(-1)], dim=-1)
             # next_q_values, _, _, _ = self.target_net(conc_next_obs)
-            next_q_values, _ = self.target_net(next_obs)
+            next_q_values, _, _ = self.target_net(next_obs)
             # next_q_values shape is [batch_size, action_dim], getting max(1)[0} will
             # give shape of [batch_size], hence unsqueeze(-1) to get [batch_size, 1]
             # which will match the shape rewards and q_values
@@ -312,16 +319,19 @@ class DRQNAgent:
             if param.grad is not None:
                 param.grad.data.clamp_(-1, 1)
         self.q_net_optim.step()
-        if self.encoder_optim is not None:
-            self.encoder_optim.step()
+        # if self.encoder_optim is not None:
+        #     self.encoder_optim.step()
 
         return metrics
 
-    def update(self, replay_iter, step):
+    def update(self, replay_iter, step, test=False):
         metrics = dict()
 
+        if test:
+            return metrics
         if step % self.update_every_steps != 0:
             return metrics
+        # print("updating")
 
         batch = next(replay_iter)
         obs, actions, rewards, discount, next_obs = utils.to_torch(batch, self.device)

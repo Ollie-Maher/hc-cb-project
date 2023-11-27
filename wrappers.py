@@ -134,6 +134,74 @@ class ActionDTypeWrapper(dm_env.Environment):
         return getattr(self._env, name)
 
 
+class FramePosWrapper(dm_env.Environment):
+    def __init__(self, env, num_frames, pixels_key="image"):
+        self._env = env
+        self._num_frames = num_frames
+        self._frames = deque([], maxlen=num_frames)
+        self._pixels_key = pixels_key
+
+        wrapped_obs_spec = env.observation_spec()
+        # assert pixels_key in wrapped_obs_spec
+
+        pixels_shape = wrapped_obs_spec[pixels_key].shape
+        # pixels_shape = wrapped_obs_spec.shape
+        # remove batch dim
+        if len(pixels_shape) == 4:
+            pixels_shape = pixels_shape[1:]
+        # if len(pixels_shape) == 2:  # for atari grayscale add extra dim for channels
+        #     pixels_shape = (pixels_shape[0], pixels_shape[1], 1)
+        self._obs_spec = specs.BoundedArray(
+            shape=np.concatenate(
+                [[pixels_shape[2] * num_frames], pixels_shape[:2]], axis=0
+            ),
+            dtype=np.uint8,
+            minimum=0,
+            maximum=255,
+            name="observation",
+        )
+
+    def _transform_observation(self, time_step):
+        assert len(self._frames) == self._num_frames
+        obs = np.concatenate(list(self._frames), axis=0)
+        # print(time_step.observation)
+        observation = OrderedDict(
+            {self._pixels_key: obs, "agent_pos": time_step.observation["agent_pos"]}
+        )
+        return time_step._replace(observation=observation)
+
+    def _extract_pixels(self, time_step):
+        # print(self._pixels_key)
+        pixels = time_step.observation[self._pixels_key]
+        # pixels = time_step.observation
+        # remove batch dim
+        if len(pixels.shape) == 4:
+            pixels = pixels[0]
+        return pixels.transpose(2, 0, 1).copy()
+
+    def reset(self):
+        time_step = self._env.reset()
+        pixels = self._extract_pixels(time_step)
+        for _ in range(self._num_frames):
+            self._frames.append(pixels)
+        return self._transform_observation(time_step)
+
+    def step(self, action):
+        time_step = self._env.step(action)
+        pixels = self._extract_pixels(time_step)
+        self._frames.append(pixels)
+        return self._transform_observation(time_step)
+
+    def observation_spec(self):
+        return self._obs_spec
+
+    def action_spec(self):
+        return self._env.action_spec()
+
+    def __getattr__(self, name):
+        return getattr(self._env, name)
+
+
 class FrameStackWrapper(dm_env.Environment):
     def __init__(self, env, num_frames, pixels_key="observation"):
         self._env = env
@@ -355,6 +423,7 @@ def make_env(name, seed, frame_stack):
         env_north = gym.make(
             name,
             env_ns="North",
+            reward_pos=(4, 5),
             render_mode="rgb_array",
             agent_view_size=agent_view_size,
         )
@@ -410,29 +479,34 @@ def make_env(name, seed, frame_stack):
 
         env_list = []
 
+        time_limit = 20
+
         env_north = load(
             domain="base1",
             task_name="reach_target",
-            time_limit=10,
+            time_limit=time_limit,
             seed=seed,
             top_camera=False,
             image_only_obs=True,
+            # global_observables=True,
             discrete_actions=True,
         )
         # env_north = ActionDTypeWrapper(env_north, np.float32)
         # env_north = ActionRepeatWrapper(env_north, 2)
         # env_north = action_scale.Wrapper(env_north, minimum=-1.0, maximum=+1.0)
         env_north = FrameStackWrapper(env_north, num_frames=frame_stack)
+        # env_north = FramePosWrapper(env_north, num_frames=frame_stack)
         env_north = ExtendedTimeStepWrapper(env_north)
         env_list.append(env_north)
 
         env_south = load(
             domain="base1",
             task_name="reach_target",
-            time_limit=10,
+            time_limit=time_limit,
             seed=seed,
             top_camera=False,
             image_only_obs=True,
+            # global_observables=True,
             maze_ori="South",
             reward_loc="Right",
             discrete_actions=True,
@@ -441,6 +515,7 @@ def make_env(name, seed, frame_stack):
         # env_south = ActionRepeatWrapper(env_south, 2)
         # env_south = action_scale.Wrapper(env_south, minimum=-1.0, maximum=+1.0)
         env_south = FrameStackWrapper(env_south, num_frames=frame_stack)
+        # env_south = FramePosWrapper(env_south, num_frames=frame_stack)
         env_south = ExtendedTimeStepWrapper(env_south)
         env_list.append(env_south)
 

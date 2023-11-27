@@ -25,6 +25,7 @@ from replay_buffer import ReplayBufferStorage, make_replay_loader
 from video import TrainVideoRecorder, VideoRecorder
 
 torch.backends.cudnn.benchmark = True
+
 from wrappers import make_env
 
 
@@ -65,8 +66,28 @@ class Workspace:
         print("agent created")
         # initialize from pretrained
         if cfg.snapshot_ts > 0:
-            pretrained_agent_model = self.load_snapshot()["agent"]
-            self.agent.init_from(pretrained_agent_model)
+            # pretrained_agent_model = self.load_snapshot()["agent"]
+            # print(pretrained_agent_model)
+            # input(...)
+            # self.agent.init_from(pretrained_agent_model)
+            snapshot_base_dir = Path(self.cfg.snapshot_load_dir)
+            domain = self.cfg.domain
+            snapshot_dir = (
+                snapshot_base_dir
+                / self.cfg.obs_type
+                / domain
+                / self.cfg.agent.name
+                / self.cfg.experiment
+            )
+
+            snapshot = (
+                snapshot_dir
+                / f"snapshot_{self.cfg.snapshot_ts}_{self.cfg.experiment}.pt"
+            )
+            # pretrained_agent_model_pth =
+            print(snapshot)
+            self.agent = torch.load(snapshot)["agent"]
+            self.agent.train(False)
             print("agent loaded")
 
         # get meta specs
@@ -80,13 +101,13 @@ class Workspace:
             specs.Array((1,), np.float32, "discount"),
         )
 
-        # create data storage
-        self.replay_storage = ReplayBufferStorage(
-            data_specs, meta_specs, self.work_dir / "buffer"
-        )
+        # # create data storage
+        # self.replay_storage = ReplayBufferStorage(
+        #     data_specs, meta_specs, self.work_dir / "buffer"
+        # )
 
-        # create replay buffer
-        self.create_replay_buffer()
+        # # create replay buffer
+        # self.create_replay_buffer()
 
         # create video recorders
         self.video_recorder = VideoRecorder(
@@ -102,6 +123,10 @@ class Workspace:
             camera_id=0 if "quadruped" not in self.cfg.domain else 2,
             use_wandb=self.cfg.use_wandb,
         )
+
+        # create agent_stats
+        # self.agent_stats = utils.Activations(self.work_dir if cfg.save_stats else None)
+        self.agent_stats_pos = utils.AgentPos(self.work_dir if cfg.save_stats else None)
 
         self.timer = utils.Timer()
         self._global_step = 0
@@ -149,16 +174,17 @@ class Workspace:
         eval_until_episode = utils.Until(self.cfg.num_eval_episodes)
         # meta = self.agent.init_meta()
         meta = OrderedDict()
-        # print("evaluating train")
+        print("evaluating")
         while eval_until_episode(episode):
             time_step = self.eval_env.reset()
             self.agent.reset()  # reset agent hidden state
             self.video_recorder.init(self.eval_env, enabled=(episode == 0))
             while not time_step.last():
                 with torch.no_grad(), utils.eval_mode(self.agent):
-                    action, _, _, _, _, _ = self.agent.act(
-                        time_step.observation, self.global_step, eval_mode=True
+                    action, q_val, cb_pred, ca3_out, ca1_out, feats = self.agent.act(
+                        time_step.observation["image"], self.global_step, eval_mode=True
                     )
+                    # print("action", action)
                 time_step = self.eval_env.step(action)
                 # self.eval_env.render()
                 self.video_recorder.record(self.eval_env)
@@ -190,7 +216,7 @@ class Workspace:
         time_step = self.train_env.reset()
         # meta = self.agent.init_meta()
         meta = OrderedDict()
-        self.replay_storage.add(time_step, meta)
+        # self.replay_storage.add(time_step, meta)
         self.train_video_recorder.init(time_step.observation)
         metrics = None
         while train_until_step(self.global_step):
@@ -210,7 +236,7 @@ class Workspace:
                         log("episode_reward", episode_reward)
                         log("episode_length", episode_frame)
                         log("episode", self.global_episode)
-                        log("buffer_size", len(self.replay_storage))
+                        # log("buffer_size", len(self.replay_storage))
                         log("step", self.global_step)
 
                 # reset env
@@ -220,10 +246,10 @@ class Workspace:
                     # if self.global_episode % 1 == 0:
                     # if reward_switch >= 30:
                     # print("SWITCHING ENV")
-                    # switch_env = not switch_env
+                    switch_env = not switch_env
                     reward_switch = 1
                     # switch_env = random.choice([True, False])
-                    switch_env = False
+                    # switch_env = False
                     # switch_env = True  # set to True to switch env
 
                     # self.replay_storage.reset()
@@ -236,21 +262,26 @@ class Workspace:
                         self.eval_envs[1] if switch_env else self.eval_envs[0]
                     )
 
+                self.agent_stats_pos.record_loc(
+                    time_step.observation["agent_pos"],
+                    episode_step,
+                    self.global_episode,
+                    episode_reward,
+                    switch_env,
+                )
                 time_step = self.train_env.reset()
-                self.replay_storage.add(time_step, meta)
+                # self.replay_storage.add(time_step, meta)
                 self.train_video_recorder.init(time_step.observation)
-                # try to save snapshot
-                if self.global_episode in self.cfg.snapshots:
-                    print("SAVING SNAPSHOT")
-                    self.save_snapshot()
+                # # try to save snapshot
+                # if self.global_episode in self.cfg.snapshots:
+                #     print("SAVING SNAPSHOT")
+                #     self.save_snapshot()
 
-                # if episode_reward > 0 and reward_switch > 0:
-                #     reward_switch += 1
-                # else:
-                #     reward_switch = 1
                 episode_step = 0
                 episode_reward = 0
                 self.agent.reset()  # reset agent, set rnn hidden to None
+                self.agent_stats_pos.save()
+                # self.agent_stats.save()
 
             # try to evaluate
             if eval_every_step(self.global_step):
@@ -261,23 +292,46 @@ class Workspace:
 
             # sample action
             with torch.no_grad(), utils.eval_mode(self.agent):
-                action, _, _, _, _, _ = self.agent.act(
-                    time_step.observation, self.global_step, eval_mode=False
+                action, q_val, cb_pred, ca3_out, ca1_out, feats = self.agent.act(
+                    time_step.observation["image"], self.global_step, eval_mode=False
                 )
+                # if ca1_out is not None:
+                #     print("ca1_out", ca1_out.shape)
 
             # try to update the agent
             if not seed_until_step(self.global_step) and (
                 not seed_until_step(self.switch_step)
             ):
-                metrics = self.agent.update(self.replay_iter, self.global_step)
+                metrics = self.agent.update(None, self.global_step, test=True)
                 self.logger.log_metrics(metrics, self.global_frame, ty="train")
 
+            # from PIL import Image
+
+            # print(type(time_step.observation))
+            # im = Image.fromarray(time_step.observation.T, "RGB")
+            # im.save("your_file.png")
+            # input("Press Enter to continue...")
+            self.agent_stats_pos.record_loc(
+                time_step.observation["agent_pos"],
+                episode_step,
+                self.global_episode,
+                episode_reward,
+                switch_env,
+            )
             # take env step
             time_step = self.train_env.step(action)
             # self.train_env.render()
             episode_reward += time_step.reward
-            self.replay_storage.add(time_step, meta)
-            self.train_video_recorder.record(time_step.observation)
+            # self.replay_storage.add(time_step, meta)
+            self.train_video_recorder.record(time_step.observation["image"])
+            # if ca1_out is not None:
+            #     self.agent_stats.add_activations(
+            #         ca1_out,
+            #         episode_step,
+            #         self.global_episode,
+            #         episode_reward,
+            #         switch_env,
+            #     )
             episode_step += 1
             self._global_step += 1
             self._switch_step += 1
@@ -331,7 +385,7 @@ class Workspace:
 
 @hydra.main(config_path=".", config_name="config")
 def main(cfg):
-    from train import Workspace as W
+    from test import Workspace as W
 
     root_dir = Path.cwd()
     workspace = W(cfg)

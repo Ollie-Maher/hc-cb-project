@@ -231,8 +231,8 @@ class DQNAgent:
         self.epsilon = epsilon
 
         if obs_type == "pixels":
-            # self.encoder = Encoder(obs_shape).to(self.device)
-            self.encoder = ResEncoder(obs_shape).to(self.device)
+            self.encoder = Encoder(obs_shape).to(self.device)
+            # self.encoder = ResEncoder(obs_shape).to(self.device)
             self.obs_dim = self.encoder.repr_dim
 
         else:
@@ -254,7 +254,9 @@ class DQNAgent:
         self.target_net.load_state_dict(self.q_net.state_dict())
 
         # optimizers
-        self.q_net_optim = torch.optim.Adam(self.q_net.parameters(), lr=self.lr)
+        self.q_net_optim = torch.optim.Adam(
+            self.q_net.parameters(), lr=1e-4
+        )  # lr=self.lr)
 
         if obs_type == "pixels":
             self.encoder_optim = torch.optim.Adam(self.encoder.parameters(), lr=self.lr)
