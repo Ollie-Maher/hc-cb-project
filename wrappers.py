@@ -399,7 +399,7 @@ class Minigrid(dm_env.Environment):
         return self.env.seed(seed)
 
 
-def make_env(name, seed, frame_stack):
+def make_env(name, seed, frame_stack, test=False):
     suite, task = name.split("-", 1)
     print(suite)
     if suite == "MiniGrid":  # name_format = "MiniGrid-Empty-8x8-v0"
@@ -487,14 +487,17 @@ def make_env(name, seed, frame_stack):
             time_limit=time_limit,
             seed=seed,
             top_camera=False,
-            image_only_obs=True,
-            # global_observables=True,
+            image_only_obs=(not test),
+            global_observables=test,
             discrete_actions=True,
         )
         # env_north = ActionDTypeWrapper(env_north, np.float32)
         # env_north = ActionRepeatWrapper(env_north, 2)
         # env_north = action_scale.Wrapper(env_north, minimum=-1.0, maximum=+1.0)
-        env_north = FrameStackWrapper(env_north, num_frames=frame_stack)
+        if test:
+            env_north = FramePosWrapper(env_north, num_frames=frame_stack)
+        else:
+            env_north = FrameStackWrapper(env_north, num_frames=frame_stack)
         # env_north = FramePosWrapper(env_north, num_frames=frame_stack)
         env_north = ExtendedTimeStepWrapper(env_north)
         env_list.append(env_north)
@@ -505,8 +508,8 @@ def make_env(name, seed, frame_stack):
             time_limit=time_limit,
             seed=seed,
             top_camera=False,
-            image_only_obs=True,
-            # global_observables=True,
+            image_only_obs=(not test),
+            global_observables=test,
             maze_ori="South",
             reward_loc="Right",
             discrete_actions=True,
@@ -514,8 +517,10 @@ def make_env(name, seed, frame_stack):
         # env_south = ActionDTypeWrapper(env_south, np.float32)
         # env_south = ActionRepeatWrapper(env_south, 2)
         # env_south = action_scale.Wrapper(env_south, minimum=-1.0, maximum=+1.0)
-        env_south = FrameStackWrapper(env_south, num_frames=frame_stack)
-        # env_south = FramePosWrapper(env_south, num_frames=frame_stack)
+        if test:
+            env_south = FramePosWrapper(env_south, num_frames=frame_stack)
+        else:
+            env_south = FrameStackWrapper(env_south, num_frames=frame_stack)
         env_south = ExtendedTimeStepWrapper(env_south)
         env_list.append(env_south)
 

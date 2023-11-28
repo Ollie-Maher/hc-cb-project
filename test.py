@@ -45,10 +45,10 @@ class Workspace:
 
         self.logger = Logger(self.work_dir, use_tb=cfg.use_tb, use_wandb=cfg.use_wandb)
 
-        self.train_envs = make_env(cfg.task, cfg.seed, cfg.frame_stack)
+        self.train_envs = make_env(cfg.task, cfg.seed, cfg.frame_stack, test=True)
         # self.train_env = make_env(cfg.task, cfg.seed, cfg.frame_stack)
         self.train_env = self.train_envs[0]
-        self.eval_envs = make_env(cfg.task, cfg.seed, cfg.frame_stack)
+        self.eval_envs = make_env(cfg.task, cfg.seed, cfg.frame_stack, test=True)
         # self.eval_env = make_env(cfg.task, cfg.seed, cfg.frame_stack)
         self.eval_env = self.eval_envs[0]
         # self.eval_env = self.train_env
@@ -355,6 +355,7 @@ class Workspace:
             / self.cfg.obs_type
             / domain
             / self.cfg.agent.name
+            / self.cfg.seed
             / self.cfg.experiment
         )
 
@@ -383,7 +384,7 @@ class Workspace:
         return None
 
 
-@hydra.main(config_path=".", config_name="config")
+@hydra.main(config_path=".", config_name="config_test")
 def main(cfg):
     from test import Workspace as W
 
