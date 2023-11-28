@@ -21,7 +21,7 @@ eval_every_frames: 10000
 num_eval_episodes: 2 # 10
 # snapshot
 snapshots: [200, 500, 1000, 2000, 4000, 8000, 10000] # 
-snapshot_dir: ../../../pretrained_models/${obs_type}/${domain}/${agent.name}/${seed}/${experiment}
+snapshot_dir: ../../../pretrained_models/${obs_type}/${domain}/${agent.name}/${experiment}/${seed}
 snapshot_load_dir: ../../../pretrained_models/
 snapshot_ts: 10000 #10000
 # replay buffer

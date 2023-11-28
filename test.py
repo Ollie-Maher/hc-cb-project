@@ -355,8 +355,8 @@ class Workspace:
             / self.cfg.obs_type
             / domain
             / self.cfg.agent.name
-            / self.cfg.seed
             / self.cfg.experiment
+            / self.cfg.seed
         )
 
         def try_load(seed):
