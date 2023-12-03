@@ -78,6 +78,7 @@ class Workspace:
                 / domain
                 / self.cfg.agent.name
                 / self.cfg.experiment
+                / f"{self.cfg.seed}"
             )
 
             snapshot = (
@@ -358,6 +359,7 @@ class Workspace:
             / self.cfg.experiment
             / self.cfg.seed
         )
+        # print("Loading snapshot from", snapshot_dir)
 
         def try_load(seed):
             snapshot = (
