@@ -1,31 +1,62 @@
+from dataclasses import fields
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from catppuccin import Flavour
 
-model_color = {
-    "hc-cb": "darkturquoise",
-    "hc-cb abl": "pink",
-    "hc": "sienna",
-    "plastic-hc": "olive",
-    "animal": "forestgreen",
-    "plastic-hc-cb": "cyan",
-}
+# model_color = {
+#     "plastic-hc": "olive",
+#     "plastic-hc-cb": "cyan",
+#     # "plastic-hc-cb abl": "cyan",
+#     "hc": "sienna",
+#     "hc-cb": "darkturquoise",
+#     # "hc-cb abl": "pink",
+#     # "animal": "forestgreen",
+#     "bio-plastic-hc-cb": "pink",
+#     # "bio-plastic-hc-cb abl": "cyan",
+#     "bio-hc-cb": "forestgreen",
+#     # "bio-hc-cb abl": "pink",
+# }
+names = [
+    "hc",
+    "hc-cb",
+    "plastic-hc",
+    "plastic-hc-cb",
+    "bio-plastic-hc-cb",
+    "bio-hc-cb",
+    "hc-cb abl",
+    "plastic-hc-cb abl",
+    "bio-plastic-hc-cb abl",
+    "bio-hc-cb abl",
+]
+model_color = {}
+flavour = Flavour.frappe()
+for field, name in zip(fields(flavour), names):
+    colour = getattr(flavour, field.name)
+    print(f"{name} - {field.name}: #{colour.hex}")
+    model_color[name] = f"#{colour.hex}"
 
 
-def plot_from_df(path1, path2, save_filename=None):
+def update_cols_name(path, model):
+    df = pd.read_csv(path)
+    df.columns = [model + "-" + col for col in df.columns]
+    columns = [
+        "Step",
+        model,
+        model + "_min",
+        model + "_max",
+    ]
+    df.columns = columns
+    return df
+
+
+def plot_from_df(path1, path2, path3, path4, save_filename=None):
 
     data_path_p = path1
     data_path_f = path2
-    model_color = {
-        "hc-cb": "darkturquoise",
-        "hc-cb abl": "pink",
-        "hc": "sienna",
-        "plastic-hc": "olive",
-        "animal": "forestgreen",
-        "plastic-hc-cb": "cyan",
-    }
-
-    # data_path_p = "/home/rh19400/neuro-rl/plots/data/plastic_rew.csv"
+    data_path_bio_p = path3
+    data_path_bio_f = path4
 
     df_plastic = pd.read_csv(data_path_p)
     columns = [
@@ -52,7 +83,15 @@ def plot_from_df(path1, path2, save_filename=None):
     ]
     df_fixed.columns = columns
 
-    df = pd.concat([df_plastic, df_fixed], axis=1, ignore_index=False, sort=False)
+    df_bio_plastic = update_cols_name(data_path_bio_p, "bio-plastic-hc-cb")
+    df_bio_fixed = update_cols_name(data_path_bio_f, "bio-hc-cb")
+
+    df = pd.concat(
+        [df_plastic, df_fixed, df_bio_plastic, df_bio_fixed],
+        axis=1,
+        ignore_index=False,
+        sort=False,
+    )
 
     ind = 2000
     df_ewma = df.ewm(alpha=0.02).mean()[
@@ -100,6 +139,20 @@ def plot_from_df(path1, path2, save_filename=None):
         color=model_color["plastic-hc-cb"],
         alpha=0.5,
     )
+    ax1.plot(
+        X,
+        df_ewma["bio-plastic-hc-cb"],
+        color=model_color["bio-plastic-hc-cb"],
+        alpha=1,
+        label="bio-plastic-hc-cb",
+    )
+    ax1.fill_between(
+        X,
+        df_ewma["bio-plastic-hc-cb"] - df_ewma_var["bio-plastic-hc-cb"],
+        df_ewma["bio-plastic-hc-cb"] + df_ewma_var["bio-plastic-hc-cb"],
+        color=model_color["bio-plastic-hc-cb"],
+        alpha=0.5,
+    )
 
     ax1.spines["top"].set_visible(False)
     ax1.spines["right"].set_visible(False)
@@ -121,6 +174,20 @@ def plot_from_df(path1, path2, save_filename=None):
         df_ewma["hc-cb"] - df_ewma_var["hc-cb"],
         df_ewma["hc-cb"] + df_ewma_var["hc-cb"],
         color=model_color["hc-cb"],
+        alpha=0.5,
+    )
+    ax2.plot(
+        X,
+        df_ewma["bio-hc-cb"],
+        color=model_color["bio-hc-cb"],
+        alpha=1,
+        label="bio-hc-cb",
+    )
+    ax2.fill_between(
+        X,
+        df_ewma["bio-hc-cb"] - df_ewma_var["bio-hc-cb"],
+        df_ewma["bio-hc-cb"] + df_ewma_var["bio-hc-cb"],
+        color=model_color["bio-hc-cb"],
         alpha=0.5,
     )
 
@@ -159,19 +226,35 @@ def plot_from_df(path1, path2, save_filename=None):
         width=width,
         color=model_color["hc"],
     )
+    ax3.bar(
+        ["bio-plastic-hc-cb"],
+        df_ewma["bio-plastic-hc-cb"].mean(),
+        yerr=df_ewma_var["bio-plastic-hc-cb"].mean(),
+        width=width,
+        color=model_color["bio-plastic-hc-cb"],
+    )
+    ax3.bar(
+        ["bio-hc-cb"],
+        df_ewma["bio-hc-cb"].mean(),
+        yerr=df_ewma_var["bio-hc-cb"].mean(),
+        width=width,
+        color=model_color["bio-hc-cb"],
+    )
 
     ax3.spines["top"].set_visible(False)
     ax3.spines["right"].set_visible(False)
     ax3.set(title="Test", ylabel="Performance (%)")
     ax3.set_ylim([0, 100])
     ax3.tick_params(axis="x", labelrotation=30)
-    ax3.hlines(y=50, xmin=-0.2, xmax=4.5, linewidth=2, color="black", linestyle="--")
+    ax3.hlines(y=50, xmin=-0.2, xmax=5.2, linewidth=2, color="black", linestyle="--")
 
     plt.tight_layout()
     plt.show()
-    # fig.savefig(f"{save_filename}.pdf", bbox_inches="tight")
+    fig.savefig(f"{save_filename}.pdf", bbox_inches="tight")
 
 
 data_path_p = "/home/rh19400/neuro-rl/plots/data/plastic_rew.csv"
 data_path_f = "/home/rh19400/neuro-rl/plots/data/fixed_rew.csv"
-plot_from_df(data_path_p, data_path_f, "reward")
+data_path_bio_p = "/home/rh19400/neuro-rl/plots/data/bio_plastic_rew.csv"
+data_path_bio_f = "/home/rh19400/neuro-rl/plots/data/bio_rew.csv"
+plot_from_df(data_path_p, data_path_f, data_path_bio_p, data_path_bio_f, "all_reward")
