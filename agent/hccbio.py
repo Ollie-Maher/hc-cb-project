@@ -60,18 +60,16 @@ class RecurrentQNet(nn.Module):
         # breakpoint()
 
         for t in range(sequence_length):
-            # with torch.no_grad():
-            # self.gru.requires_grad_(False)
-            # self.gru.weight_ih_l0.requires_grad_(True)
+            self.gru.requires_grad_(False)
             gru_out, hidden = self.gru(gru_input, hidden)
-            # gru_out goes to fc (ca1)
-            # ca1_out = F.relu(self.fc(gru_out))
-            # pred = self.cerebellum_net(ca1_out)
+            # # gru_out goes to fc (ca1)
+            # # ca1_out = F.relu(self.fc(gru_out))
+            # # pred = self.cerebellum_net(ca1_out)
             pred = self.cerebellum_net(hidden.detach())
             pred = pred.transpose(0, 1)
-            # add random noise to the cerebellum prediction
-            # noise = torch.randn_like(pred) * 1.0 + 0
-            # pred = pred + noise
+            # # add random noise to the cerebellum prediction
+            # # noise = torch.randn_like(pred) * 1.0 + 0
+            # # pred = pred + noise
             if t < sequence_length - 1:
                 # gru_input = torch.cat([x[:, t + 1 : t + 2, :], hidden], dim=2)
                 gru_input = torch.cat([x[:, t + 1 : t + 2, :], pred.detach()], dim=2)

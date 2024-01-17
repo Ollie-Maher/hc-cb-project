@@ -43,14 +43,18 @@ class Encoder(nn.Module):
         assert len(obs_shape) == 3
         # self.repr_dim = 32 * 35 * 35 # dm_control
         # self.repr_dim = 32 * 25 * 25 # minigrid partial obs
-        self.repr_dim = 32 * 9 * 9  # minigrid partial obs
+        # self.repr_dim = 32 * 9 * 9  # minigrid partial obs
+        self.repr_dim = 256  # minigrid partial obs
         # self.repr_dim = 32 * 1 * 1  # minigrid partial obs
         # self.repr_dim = 32 * 17 * 17  # minigrid full
         # self.repr_dim = 32 * 38 * 38  # atari
         # self.repr_dim = 32 * 29 * 29  # neuro_maze
+        self.repr_dim = 256  # 1024
+        self.out_dim = 32 * 9 * 9  # minigrid partial obs 3
 
         self.convnet = nn.Sequential(
             nn.Conv2d(obs_shape[0], 32, 2, stride=2),
+            # nn.Conv2d(9, 32, 2, stride=2),
             nn.ReLU(),
             nn.Conv2d(32, 32, 2, stride=1),
             nn.ReLU(),
@@ -60,6 +64,7 @@ class Encoder(nn.Module):
             nn.ReLU(),
         )
 
+        self.fc = nn.Linear(self.out_dim, self.repr_dim)
         self.apply(utils.weight_init)
 
     def forward(self, obs):
@@ -70,6 +75,7 @@ class Encoder(nn.Module):
         h = self.convnet(obs)
         h = h.view(h.shape[0], -1)
         # h = h.reshape(-1, self.repr_dim)
+        h = self.fc(h)
         return h
 
 
@@ -86,7 +92,7 @@ class ResEncoder(nn.Module):
 
         self.num_ftrs = self.model.fc.in_features
         self.model.fc = nn.Identity()
-        self.repr_dim = 1024  # 1024
+        self.repr_dim = 256  # 1024  # 1024
         self.image_channel = 3
         # x = torch.randn([32] + [9, 84, 84])
         # x = torch.randn([32] + [obs_shape[0], 64, 64])  # neuro_maze
@@ -205,8 +211,8 @@ class DRQNAgent:
         self.gru_hidden = None
 
         if obs_type == "pixels":
-            # self.encoder = Encoder(obs_shape).to(self.device)
-            self.encoder = ResEncoder(obs_shape).to(self.device)
+            self.encoder = Encoder(obs_shape).to(self.device)
+            # self.encoder = ResEncoder(obs_shape).to(self.device)
             self.obs_dim = self.encoder.repr_dim
 
         else:
@@ -249,6 +255,7 @@ class DRQNAgent:
         self.gru_hidden = None
 
     def act(self, obs, step, eval_mode=False):
+        # self.epsilon = 0.55
         obs = torch.as_tensor(obs, device=self.device).unsqueeze(0)
         if np.random.rand() > self.epsilon:
             with torch.no_grad():  # probably don't need this as it is done before act
@@ -319,8 +326,8 @@ class DRQNAgent:
             if param.grad is not None:
                 param.grad.data.clamp_(-1, 1)
         self.q_net_optim.step()
-        # if self.encoder_optim is not None:
-        #     self.encoder_optim.step()
+        if self.encoder_optim is not None:
+            self.encoder_optim.step()
 
         return metrics
 
@@ -343,8 +350,10 @@ class DRQNAgent:
         # augment, put batch and seq_len together
         B, S, C, H, W = obs.shape
 
-        obs = self.aug(obs.reshape(B * S, C, H, W).float())
-        next_obs = self.aug(next_obs.reshape(B * S, C, H, W).float())
+        # obs = self.aug(obs.reshape(B * S, C, H, W).float())
+        # next_obs = self.aug(next_obs.reshape(B * S, C, H, W).float())
+        obs = obs.reshape(B * S, C, H, W).float()
+        next_obs = next_obs.reshape(B * S, C, H, W).float()
 
         # # encode
         obs = self.encoder(obs)

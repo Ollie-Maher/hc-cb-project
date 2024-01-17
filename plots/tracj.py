@@ -196,7 +196,7 @@ def plot_all(models):
 
     plt.tight_layout()
     plt.show()
-    fig.savefig("all_trajec.pdf", bbox_inches="tight")
+    # fig.savefig("all_trajec.pdf", bbox_inches="tight")
 
 
 def plot_together(df_drqn, df_hcc):

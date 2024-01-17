@@ -64,9 +64,35 @@ class Workspace:
         )
         print("agent created")
         # initialize from pretrained
+        # if cfg.snapshot_ts > 0:
+        #     pretrained_agent_model = self.load_snapshot()["agent"]
+        #     self.agent.init_from(pretrained_agent_model)
+        #     print("agent loaded")
         if cfg.snapshot_ts > 0:
-            pretrained_agent_model = self.load_snapshot()["agent"]
-            self.agent.init_from(pretrained_agent_model)
+            # pretrained_agent_model = self.load_snapshot()["agent"]
+            # print(pretrained_agent_model)
+            # input(...)
+            # self.agent.init_from(pretrained_agent_model)
+            snapshot_base_dir = Path(self.cfg.snapshot_load_dir)
+            domain = self.cfg.domain
+            snapshot_dir = (
+                snapshot_base_dir
+                / self.cfg.obs_type
+                / domain
+                / self.cfg.agent.name
+                / self.cfg.experiment
+                / f"{self.cfg.seed}"
+            )
+
+            snapshot = (
+                snapshot_dir
+                / f"snapshot_{self.cfg.snapshot_ts}_{self.cfg.experiment}.pt"
+            )
+            # pretrained_agent_model_pth =
+            print(snapshot)
+            print(torch.load(snapshot)["agent"])
+            self.agent = torch.load(snapshot)["agent"]
+            # self.agent.train(False)
             print("agent loaded")
 
         # get meta specs

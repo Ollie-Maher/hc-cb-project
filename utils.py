@@ -21,6 +21,8 @@ class Activations(object):
             self.save_dir = None
 
         self.columns = [f"neuron_{i}" for i in range(512)] + [
+            "position_x",
+            "position_y",
             "step",
             "episode",
             "reward",
@@ -29,18 +31,18 @@ class Activations(object):
         self.df = pd.DataFrame(columns=self.columns)
         self.lst = []  # list to store tensors tmp because df is not efficient
 
-    def add_activations(self, acts, step, episode, reward, env_id):
+    def add_activations(self, acts, agent_pos, step, episode, reward, env_id):
         # acts: (1, 1, 512)
         acts = acts.squeeze(0).squeeze(0).cpu().numpy()
         # tensor_row shape (516,)
-        tensor_row = np.concatenate([acts, [step, episode, reward, env_id]])
+        tensor_row = np.concatenate([acts, [agent_pos[0], agent_pos[1], step, episode, reward, env_id]])
         self.lst.append(tensor_row)
 
-    def save(self):
+    def save(self, name):
         # print("Saving activations...")
         new_df = pd.DataFrame(self.lst, columns=self.columns)
         self.df = pd.concat([self.df, new_df], ignore_index=True)
-        self.df.to_csv(self.save_dir / "ca3.csv", index=False)
+        self.df.to_csv(self.save_dir / f"{name}.csv", index=False)
         self.lst = []
 
 

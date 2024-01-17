@@ -126,7 +126,12 @@ class Workspace:
         )
 
         # create agent_stats
-        # self.agent_stats = utils.Activations(self.work_dir if cfg.save_stats else None)
+        self.agent_ca3_stats = utils.Activations(
+            self.work_dir if cfg.save_stats else None
+        )
+        self.agent_ca1_stats = utils.Activations(
+            self.work_dir if cfg.save_stats else None
+        )
         self.agent_stats_pos = utils.AgentPos(self.work_dir if cfg.save_stats else None)
 
         self.timer = utils.Timer()
@@ -247,10 +252,10 @@ class Workspace:
                     # if self.global_episode % 1 == 0:
                     # if reward_switch >= 30:
                     # print("SWITCHING ENV")
-                    switch_env = not switch_env
+                    # switch_env = not switch_env
                     reward_switch = 1
                     # switch_env = random.choice([True, False])
-                    # switch_env = False
+                    switch_env = False
                     # switch_env = True  # set to True to switch env
 
                     # self.replay_storage.reset()
@@ -282,7 +287,8 @@ class Workspace:
                 episode_reward = 0
                 self.agent.reset()  # reset agent, set rnn hidden to None
                 self.agent_stats_pos.save()
-                # self.agent_stats.save()
+                self.agent_ca3_stats.save("ca3")
+                self.agent_ca1_stats.save("ca1")
 
             # try to evaluate
             if eval_every_step(self.global_step):
@@ -325,14 +331,24 @@ class Workspace:
             episode_reward += time_step.reward
             # self.replay_storage.add(time_step, meta)
             self.train_video_recorder.record(time_step.observation["image"])
-            # if ca1_out is not None:
-            #     self.agent_stats.add_activations(
-            #         ca1_out,
-            #         episode_step,
-            #         self.global_episode,
-            #         episode_reward,
-            #         switch_env,
-            #     )
+            if ca3_out is not None:
+                self.agent_ca3_stats.add_activations(
+                    ca3_out,
+                    time_step.observation["agent_pos"],
+                    episode_step,
+                    self.global_episode,
+                    episode_reward,
+                    switch_env,
+                )
+            if ca1_out is not None:
+                self.agent_ca1_stats.add_activations(
+                    ca1_out,
+                    time_step.observation["agent_pos"],
+                    episode_step,
+                    self.global_episode,
+                    episode_reward,
+                    switch_env,
+                )
             episode_step += 1
             self._global_step += 1
             self._switch_step += 1

@@ -295,6 +295,7 @@ class HCCAgent:
         self.cereb_pred = None
 
     def act(self, obs, step, eval_mode=False):
+        # self.epsilon = 0.55
         obs = torch.as_tensor(obs, device=self.device).unsqueeze(0)
         if np.random.rand() > self.epsilon:
             with torch.no_grad():  # probably don't need this as it is done before act

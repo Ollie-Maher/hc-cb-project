@@ -41,13 +41,15 @@ class Encoder(nn.Module):
         super().__init__()
 
         assert len(obs_shape) == 3
-        # self.repr_dim = 32 * 35 * 35 # dm_control
-        # self.repr_dim = 32 * 25 * 25  # minigrid partial obs
-        # self.repr_dim = 32 * 7 * 7  # minigrid partial obs 3
-        self.repr_dim = 32 * 9 * 9  # minigrid partial obs 3
-        # self.repr_dim = 32 * 17 * 17  # minigrid full
-        # self.repr_dim = 32 * 38 * 38  # atari
-        # self.repr_dim = 32 * 29 * 29  # neuro_maze
+        # # self.repr_dim = 32 * 35 * 35 # dm_control
+        # # self.repr_dim = 32 * 25 * 25  # minigrid partial obs
+        # # self.repr_dim = 32 * 7 * 7  # minigrid partial obs 3
+        # self.repr_dim = 32 * 9 * 9  # minigrid partial obs 3
+        # # self.repr_dim = 32 * 17 * 17  # minigrid full
+        # # self.repr_dim = 32 * 38 * 38  # atari
+        # # self.repr_dim = 32 * 29 * 29  # neuro_maze
+        self.repr_dim = 4 #1024
+        self.out_dim = 32 * 9 * 9  # minigrid partial obs 3
 
         self.convnet = nn.Sequential(
             nn.Conv2d(obs_shape[0], 32, 2, stride=2),
@@ -61,6 +63,7 @@ class Encoder(nn.Module):
             nn.ReLU(),
         )
 
+        self.fc = nn.Linear(self.out_dim, self.repr_dim)
         self.apply(utils.weight_init)
 
     def forward(self, obs):
@@ -71,6 +74,7 @@ class Encoder(nn.Module):
         h = self.convnet(obs)
         h = h.view(h.shape[0], -1)
         # h = h.reshape(-1, self.repr_dim)
+        h = self.fc(h)
         return h
 
 
@@ -287,7 +291,7 @@ class DQNAgent:
         else:
             action = np.random.randint(self.action_dim)
 
-        return action
+        return action, None, None, None, None, None
 
     def learn(self, obs, actions, rewards, discount, next_obs, step):
         metrics = dict()
@@ -350,7 +354,7 @@ class DQNAgent:
         obs = obs.squeeze(1)
         next_obs = next_obs.squeeze(1)
         actions = actions.squeeze(1)
-        actions = actions[:, 0]  # need to fix this in the replay buffer or wrapper
+        # actions = actions[:, 0]  # need to fix this in the replay buffer or wrapper
         # actions = actions.unsqueeze(-1)
         # print(actions.shape)
         rewards = rewards.squeeze(1)
