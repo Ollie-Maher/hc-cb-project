@@ -92,7 +92,7 @@ class ResEncoder(nn.Module):
 
         self.num_ftrs = self.model.fc.in_features
         self.model.fc = nn.Identity()
-        self.repr_dim = 256  # 1024  # 1024
+        self.repr_dim = 1024  # 1024
         self.image_channel = 3
         # x = torch.randn([32] + [9, 84, 84])
         # x = torch.randn([32] + [obs_shape[0], 64, 64])  # neuro_maze
@@ -158,7 +158,7 @@ class RecurrentQNet(nn.Module):
 
         # with torch.no_grad():
         # breakpoint()
-        # self.gru.requires_grad_(False)
+        self.gru.requires_grad_(False)
         gru_out, gru_hidden = self.gru(x, hidden)
         ca1_out = F.relu(self.fc(gru_out))
         out = self.out(ca1_out)
@@ -211,8 +211,8 @@ class DRQNAgent:
         self.gru_hidden = None
 
         if obs_type == "pixels":
-            self.encoder = Encoder(obs_shape).to(self.device)
-            # self.encoder = ResEncoder(obs_shape).to(self.device)
+            # self.encoder = Encoder(obs_shape).to(self.device)
+            self.encoder = ResEncoder(obs_shape).to(self.device)
             self.obs_dim = self.encoder.repr_dim
 
         else:
@@ -326,8 +326,8 @@ class DRQNAgent:
             if param.grad is not None:
                 param.grad.data.clamp_(-1, 1)
         self.q_net_optim.step()
-        if self.encoder_optim is not None:
-            self.encoder_optim.step()
+        # if self.encoder_optim is not None:
+        #     self.encoder_optim.step()
 
         return metrics
 

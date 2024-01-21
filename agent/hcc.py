@@ -377,8 +377,10 @@ class HCCAgent:
         # augment, put batch and seq_len together
         B, S, C, H, W = obs.shape
 
-        obs = self.aug(obs.reshape(B * S, C, H, W).float())
-        next_obs = self.aug(next_obs.reshape(B * S, C, H, W).float())
+        # obs = self.aug(obs.reshape(B * S, C, H, W).float())
+        # next_obs = self.aug(next_obs.reshape(B * S, C, H, W).float())
+        obs = obs.reshape(B * S, C, H, W).float()
+        next_obs = next_obs.reshape(B * S, C, H, W).float()
 
         # # encode
         obs = self.encoder(obs)

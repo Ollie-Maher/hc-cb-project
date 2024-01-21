@@ -1,0 +1,17 @@
+# @package agent
+_target_: agent.hcdyna.HCDYNAAgent
+name: hcdyna
+obs_type: ??? # to be specified later
+obs_shape: ??? # to be specified later
+action_shape: ??? # to be specified later
+hidden_dim: 512 # 512
+device: ${device}
+lr: 1e-4 #1e-4
+gamma: 0.99 #0.99
+batch_size: 32
+tau: 0.01
+update_every_steps: 2
+use_wandb: ${use_wandb}
+nstep: 1
+sequence_length: 10
+epsilon: 0.1
