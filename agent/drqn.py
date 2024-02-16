@@ -92,7 +92,7 @@ class ResEncoder(nn.Module):
 
         self.num_ftrs = self.model.fc.in_features
         self.model.fc = nn.Identity()
-        self.repr_dim = 1024  # 1024
+        self.repr_dim = 256  # 1024
         self.image_channel = 3
         # x = torch.randn([32] + [9, 84, 84])
         # x = torch.randn([32] + [obs_shape[0], 64, 64])  # neuro_maze
@@ -158,7 +158,7 @@ class RecurrentQNet(nn.Module):
 
         # with torch.no_grad():
         # breakpoint()
-        self.gru.requires_grad_(False)
+        # self.gru.requires_grad_(False)
         gru_out, gru_hidden = self.gru(x, hidden)
         ca1_out = F.relu(self.fc(gru_out))
         out = self.out(ca1_out)
@@ -350,10 +350,10 @@ class DRQNAgent:
         # augment, put batch and seq_len together
         B, S, C, H, W = obs.shape
 
-        # obs = self.aug(obs.reshape(B * S, C, H, W).float())
-        # next_obs = self.aug(next_obs.reshape(B * S, C, H, W).float())
-        obs = obs.reshape(B * S, C, H, W).float()
-        next_obs = next_obs.reshape(B * S, C, H, W).float()
+        obs = self.aug(obs.reshape(B * S, C, H, W).float())
+        next_obs = self.aug(next_obs.reshape(B * S, C, H, W).float())
+        # obs = obs.reshape(B * S, C, H, W).float()
+        # next_obs = next_obs.reshape(B * S, C, H, W).float()
 
         # # encode
         obs = self.encoder(obs)

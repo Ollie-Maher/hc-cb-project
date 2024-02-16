@@ -48,7 +48,7 @@ class Encoder(nn.Module):
         # # self.repr_dim = 32 * 17 * 17  # minigrid full
         # # self.repr_dim = 32 * 38 * 38  # atari
         # # self.repr_dim = 32 * 29 * 29  # neuro_maze
-        self.repr_dim = 5  # 256  # 1024
+        self.repr_dim = 1024  # 256  # 1024
         self.out_dim = 32 * 9 * 9  # minigrid partial obs 3
 
         self.convnet = nn.Sequential(
@@ -222,8 +222,16 @@ class CA3Net(nn.Module):
         # +1 for the action size
         self.gru = nn.GRU(state_dim, hidden_dim, batch_first=True)
         # self.fc = nn.Linear(hidden_dim, state_dim)
-        self.fc = nn.Linear(hidden_dim + 1, hidden_dim)
-        self.out = nn.Linear(hidden_dim, state_dim)
+        self.fc = nn.Linear(hidden_dim + action_dim, hidden_dim // 2)
+        # self.out = nn.Linear(hidden_dim // 2, state_dim)
+        self.out = nn.Linear(hidden_dim // 2, hidden_dim)
+
+        self.rew_model = nn.Sequential(
+            nn.Linear(hidden_dim + action_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, 1),
+            nn.Tanh(),
+        )
 
         # self.phi = nn.Linear(hidden_dim, state_dim)
         # self.rew_model = nn.Linear(hidden_dim, 1)
@@ -244,17 +252,18 @@ class CA3Net(nn.Module):
         # self.gru.requires_grad_(False)
         gru_out, gru_hidden = self.gru(x, hidden)
         if action is not None:
-            x_conc = torch.cat([gru_out, action], dim=-1)
-        pred_next_state = F.relu(self.fc(x_conc))
+            x_conc = torch.cat([gru_out.detach(), action], dim=-1)
+        # pred_next_state = F.relu(self.fc(x_conc))
+        pred_next_state = F.elu(self.fc(x_conc))
         # pred_next_state = F.relu(self.fc(gru_out))
         pred_next_state = self.out(pred_next_state)
 
         # # predict next state and action
         # pred_next_state = self.phi(gru_out)
-        # pred_rew = self.rew_model(gru_out)
+        pred_rew = self.rew_model(x_conc)
 
         # return out, gru_hidden, ca1_out
-        return gru_out, pred_next_state, gru_hidden
+        return gru_out, pred_next_state, pred_rew, gru_hidden
 
     def init_hidden(self, batch_size):
         return torch.zeros(1, batch_size, self.hidden_dim, device=self.device)
@@ -276,8 +285,8 @@ class QNet(nn.Module):
 
     def __init__(self, state_dim, hidden_dim, action_dim):
         super(QNet, self).__init__()
-        self.fc1 = nn.Linear(state_dim, hidden_dim)
-        # self.fc1 = nn.Linear(hidden_dim, hidden_dim)
+        # self.fc1 = nn.Linear(state_dim, hidden_dim)
+        self.fc1 = nn.Linear(hidden_dim, hidden_dim)
         # self.fc1 = nn.Linear(hidden_dim + state_dim, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, action_dim)
 
@@ -322,6 +331,8 @@ class HCDYNAAgent:
         self.use_wandb = use_wandb
         self.epsilon = epsilon
         self.gru_hidden = None
+        self.skip_update = False
+        self.pred_err = 0.0
 
         if obs_type == "pixels":
             self.encoder = Encoder(obs_shape).to(self.device)
@@ -378,6 +389,7 @@ class HCDYNAAgent:
         self.prev_action = torch.zeros(1).to(self.device)
         self.prev_repres = torch.zeros((1, self.encoder.repr_dim)).to(self.device)
         self.gru_hidden = None
+        self.pred_err = 0.0
         # pass
 
     def intrinsic_reward(self, obs, next_obs, action):
@@ -391,7 +403,7 @@ class HCDYNAAgent:
 
         return reward
 
-    def act(self, obs, step, eval_mode=False):
+    def act(self, obs, step, eval_mode=False, prev_reward=None):
         obs = torch.as_tensor(obs, device=self.device).unsqueeze(0)
         # breakpoint()
         if np.random.rand() > self.epsilon:
@@ -404,13 +416,37 @@ class HCDYNAAgent:
                 # q_values, _, _ = self.ca3_net(
                 #     state=repres, action=self.prev_action.unsqueeze(0)
                 # )
-                state, pred_repres, self.gru_hidden = self.ca3_net(
+
+                # # need to create a batch of 2 for the previous time step and current one to pass to CA3 net
+                # # of shape [2, 1, features_dim]
+                self.prev_action = self.prev_action.type(torch.int64)
+                one_hot_action = F.one_hot(
+                    self.prev_action, num_classes=self.action_dim
+                )  # shape [1, 3]
+                # batch_repres = torch.cat(
+                #     (self.prev_repres.unsqueeze(0), repres.unsqueeze(0)), dim=0
+                # )
+                # batch_gru_hidden = self.gru_hidden
+                # # torch.cat(
+                # #     self.prev_gru_hidden, self.gru_hidden, dim=0
+                # # )
+                # batch_action = torch.cat(
+                #     (one_hot_action.unsqueeze(0), one_hot_action.unsqueeze(0)), dim=0
+                # )  # the second action doesn't matter
+
+                # state, pred_repres, pred_rew, self.gru_hidden = self.ca3_net(
+                #     x=batch_repres,
+                #     hidden=batch_gru_hidden,
+                #     action=batch_action,
+                # )
+                state, pred_repres, pred_rew, self.gru_hidden = self.ca3_net(
                     x=repres.unsqueeze(0),
                     hidden=self.gru_hidden,
-                    action=self.prev_action.unsqueeze(0).unsqueeze(0),
+                    action=one_hot_action.unsqueeze(0),
+                    # action=self.prev_action.unsqueeze(0).unsqueeze(0),
                 )
                 # conc_state = torch.cat([repres.unsqueeze(0), state], dim=2)
-                conc_state = repres
+                conc_state = state  # select the current state
                 q_values = self.q_net(conc_state)
                 # conc_repres = torch.cat([repres, pred_repres], dim=1)
                 # conc_repres = torch.cat([self.prev_repres, repres], dim=1)
@@ -418,19 +454,49 @@ class HCDYNAAgent:
                 # q_values = self.q_net(repres.unsqueeze(0))
                 # q_values = self.q_net(conc_repres)
                 # q_values = self.q_net(pred_repres)
+
+                # # predict next state and reward
+                # state_err = torch.linalg.norm(
+                #     pred_repres[0].squeeze(0) - repres, ord=2, dim=-1, keepdim=True
+                # ).mean()
+                # rew_err = torch.linalg.norm(
+                #     pred_rew[0].squeeze(0) - prev_reward, ord=2, dim=-1, keepdim=True
+                # ).mean()
+                # if step > 10000 and prev_reward == 1.0:
+                #     print(f"pred rew: {pred_rew[0].squeeze(0)}, rew: {prev_reward}")
+                #     print(f"state err: {state_err}, rew err: {rew_err}")
+                # self.pred_err += state_err + (rew_err * 1000.0)
+                # # if step > 10000:
+                # #     print(f"pred err: {self.pred_err}")
+                # #     print(f"state err: {state_err}, rew err: {rew_err}")
+
+                # if self.pred_err < 500.0:
+                #     # if not self.skip_update:
+                #     #     print(f"setting skip to true, pred err: {self.pred_err}")
+                #     #     print(f"pred rew: {pred_rew[0].squeeze(0)}, rew: {prev_reward}")
+                #     self.skip_update = True
+                # else:
+                #     # if self.skip_update:
+                #     #     print(f"setting skip to false, pred err: {self.pred_err}")
+                #     #     print(f"pred rew: {pred_rew[0].squeeze(0)}, rew: {prev_reward}")
+                #     self.skip_update = False
+
             action = q_values.argmax().item()
         else:
             action = np.random.randint(self.action_dim)
 
         self.prev_action[0] = action
-        # with torch.no_grad():
-        #     self.prev_repres = self.encoder(obs)
+        # self.prev_repres = repres
+        with torch.no_grad():
+            self.prev_repres = self.encoder(obs)
         return action, None, None, None, None, None
 
     def learn(self, obs, actions, rewards, discount, next_obs, step):
         metrics = dict()
         # print(obs.shape, actions.shape, rewards.shape, next_obs.shape)
         # breakpoint()
+
+        one_hot_actions = F.one_hot(actions, num_classes=self.action_dim).float()
 
         # Update CA3 network
         # with torch.no_grad():
@@ -439,38 +505,41 @@ class HCDYNAAgent:
         #     )
         # ca3_in = torch.cat([obs, actions.unsqueeze(-1)], dim=-1)
         # q_values, _, _ = self.ca3_net(state=obs, action=actions.unsqueeze(-1).detach())
-        state, pred_obs, _ = self.ca3_net(x=obs, action=actions.unsqueeze(-1))
+        # state, pred_obs, pred_rew, _ = self.ca3_net(x=obs, action=actions.unsqueeze(-1))
+        state, pred_obs, pred_rew, _ = self.ca3_net(x=obs, action=one_hot_actions)
 
         # concatenate state and predicted state for CA1
         # conc_state = torch.cat([obs, pred_obs.detach()], dim=1)
         # conc_state = torch.cat([obs, pred_obs], dim=1)
         # conc_next_state = torch.cat([next_obs, pred_next_obs], dim=1)
-        # conc_state = torch.cat([obs, state.detach()], dim=2)
+        conc_state = torch.cat([obs, state.detach()], dim=2)
         # conc_state = torch.cat([obs, state], dim=2)
-        conc_state = obs
+        # conc_state = obs
 
         # Update Q network
         # q_values = self.q_net(obs)
         # q_values = self.q_net(obs.detach())
-        # q_values = self.q_net(conc_state)
         # q_values = self.q_net(pred_obs)
         # pred_obs = self.q_net(state=q_values)
-        q_values = self.q_net(conc_state)
-        # q_values = self.q_net(state.detach())
+        # q_values = self.q_net(conc_state)
+        q_values = self.q_net(state)
 
         with torch.no_grad():
             next_action = q_values.argmax(dim=2)
+            one_hot_next_action = F.one_hot(next_action, num_classes=self.action_dim)
             # next_action = q_values.argmax(dim=1)
             # print(next_action.shape)
             # next_action = q_values.argmax().item()
-            next_state, pred_next_obs, _ = self.ca3_net(
+            next_state, pred_next_obs, _, _ = self.ca3_net(
                 # state=next_obs, action=actions.unsqueeze(-1)
                 x=next_obs,
-                action=next_action.unsqueeze(-1),
+                action=one_hot_next_action,
+                # action=one_hot_actions,
+                # action=next_action.unsqueeze(-1),
             )
             # conc_next_state = torch.cat([next_obs, pred_next_obs], dim=1)
-            # conc_next_state = torch.cat([next_obs, next_state], dim=2)
-            conc_next_state = next_obs
+            conc_next_state = torch.cat([next_obs, next_state], dim=2)
+            # conc_next_state = next_state
         # we unsqueeze(-1) the actions to get shape (batch_size, 1) which matchtes
         # rewards shape of (batch_size, 1). Unsqueeze is not required and alternatively
         # we can make sure rewards to be shape of (batch_size)
@@ -480,8 +549,8 @@ class HCDYNAAgent:
         with torch.no_grad():
             # next_q_values = self.target_net(self.encoder(next_obs))
             # next_q_values = self.target_net(next_obs)
-            # next_q_values = self.target_net(next_state)
-            next_q_values = self.target_net(conc_next_state)
+            next_q_values = self.target_net(next_state)
+            # next_q_values = self.target_net(conc_next_state)
             # next_q_values = self.target_net(pred_next_obs)
             # next_q_values, _, _ = self.target_net(state=next_obs, action=None)
             # next_q_values shape is [batch_size, action_dim], getting max(1)[0} will
@@ -500,28 +569,43 @@ class HCDYNAAgent:
 
         # state_loss = F.mse_loss(pred_obs, next_obs)
         state_loss = torch.linalg.norm(
-            pred_obs - next_obs, ord=2, dim=-1, keepdim=True
+            # pred_obs - next_obs, ord=2, dim=-1, keepdim=True
+            pred_obs - next_state,
+            ord=2,
+            dim=-1,
+            keepdim=True,
         ).mean()
-        neg_sample = torch.roll(obs, 1, dims=1)
-        # loss_neg_rnd = torhc.mean(
-        #     torch.exp(-torch.linalg.norm(obs - neg_sample, ord=2, dim=-1, keepdim=True))
-        # )
-        loss_neg_rnd = torch.mean(torch.exp(-5 * torch.norm(obs - neg_sample, dim=-1)))
-        # loss_neg_neigh = torch.mean(torch.exp(-torch.linalg.norm(obs - next_obs, ord=2, dim=-1, keepdim=True)))
-        loss_pos = torch.mean(F.mse_loss(pred_obs, next_obs))
+        rew_loss = torch.linalg.norm(
+            pred_rew - rewards, ord=2, dim=-1, keepdim=True
+        ).mean()
+
+        # neg_sample = torch.roll(obs, 1, dims=1)
+        # # loss_neg_rnd = torhc.mean(
+        # #     torch.exp(-torch.linalg.norm(obs - neg_sample, ord=2, dim=-1, keepdim=True))
+        # # )
+        # loss_neg_rnd = torch.mean(torch.exp(-5 * torch.norm(obs - neg_sample, dim=-1)))
+        # loss_neg_neigh = torch.mean(torch.exp(-5 * torch.norm(obs - next_obs, dim=-1)))
+        # # loss_neg_neigh = torch.mean(torch.exp(-torch.linalg.norm(obs - next_obs, ord=2, dim=-1, keepdim=True)))
+        # loss_pos = torch.mean(F.mse_loss(pred_obs, next_obs))
+
+        zp_loss = ((pred_obs - next_state) ** 2).sum(-1).mean()
+
         # rew_loss = F.mse_loss(pred_rew, rewards)
         # scale state loss
-        pred_loss = state_loss  # * 0.001  # + rew_loss
-        # loss = q_loss + pred_loss
-        loss = 1e-4 * q_loss + 1e-5 * loss_neg_rnd + 1e-6 * loss_pos
+        # pred_loss = state_loss  # * 0.001  # + rew_loss
+        # loss = q_loss + state_loss + rew_loss
+        # loss = 1e-4 * q_loss + 1e-5 * loss_neg_rnd + 1e-6 * loss_pos
         # loss = 1e-4 * q_loss
+        loss = q_loss + zp_loss
         # loss = q_loss
 
         if self.use_wandb:
             metrics["q_loss"] = q_loss.item()
             metrics["q_val"] = q_values.mean().item()
             metrics["q_target"] = next_q_values.mean().item()
-            metrics["pred_loss"] = pred_loss.item()
+            # metrics["pred_loss"] = pred_loss.item()
+            metrics["state_loss"] = state_loss.item()
+            metrics["rew_loss"] = rew_loss.item()
 
         if self.encoder_optim is not None:
             self.encoder_optim.zero_grad()
@@ -542,6 +626,10 @@ class HCDYNAAgent:
 
         if step % self.update_every_steps != 0:
             return metrics
+
+        # if self.skip_update:
+        #     # print(f"skipping update, pred err: {self.pred_err}")
+        #     return metrics
 
         batch = next(replay_iter)
         obs, actions, rewards, discount, next_obs = utils.to_torch(batch, self.device)

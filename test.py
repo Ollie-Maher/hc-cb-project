@@ -276,6 +276,8 @@ class Workspace:
                     switch_env,
                 )
                 time_step = self.train_env.reset()
+                # obs = OrderedDict({"image": time_step.observation["image"]})
+                # time_step = time_step._replace(observation=obs)
                 # self.replay_storage.add(time_step, meta)
                 self.train_video_recorder.init(time_step.observation)
                 # # try to save snapshot
@@ -297,10 +299,33 @@ class Workspace:
                 )
                 self.eval()
 
+            # set weights corresponding to neuron_indices to zero
+            full_array = np.arange(512)
+            place_idx = np.array(self.cfg.neurons_indices)
+            border_idx = np.array(self.cfg.bdc_neurons_indices)
+            feature_idx = np.concatenate((place_idx, border_idx))
+            # idx = np.setdiff1d(full_array, feature_idx)
+            # ony first time select random neurons
+            if self.global_step == 0:
+                print("### Randomly selecting neurons ###")
+                idx = np.setdiff1d(full_array, feature_idx)
+                idx = np.random.choice(idx, 50, replace=False)
+                # idx = np.random.choice(feature_idx, 50, replace=False)
+                # idx = feature_idx
+                # print("idx", idx)
+
+                # with torch.no_grad():
+                #     # for idx in self.cfg.neurons_indices:
+                #     self.agent.q_net.fc.weight.data[:, idx] = 0
+                #     self.agent.q_net.fc.bias.data[idx] = 0
+
             # sample action
             with torch.no_grad(), utils.eval_mode(self.agent):
                 action, q_val, cb_pred, ca3_out, ca1_out, feats = self.agent.act(
-                    time_step.observation["image"], self.global_step, eval_mode=False
+                    time_step.observation["image"],
+                    self.global_step,
+                    eval_mode=False,
+                    neurons_reset_idx=idx,
                 )
                 # if ca1_out is not None:
                 #     print("ca1_out", ca1_out.shape)
@@ -349,6 +374,14 @@ class Workspace:
                     episode_reward,
                     switch_env,
                 )
+
+            # replace the obs with image only instead of the full obs with
+            # agent_pos so that it can be stored in the replay buffer
+            # obs = OrderedDict({"observation": time_step.observation["image"]})
+            # obs = time_step.observation["image"]
+            # tm_store = time_step
+            # tm_store = tm_store._replace(observation=obs)
+            # self.replay_storage.add(tm_store, meta)
             episode_step += 1
             self._global_step += 1
             self._switch_step += 1

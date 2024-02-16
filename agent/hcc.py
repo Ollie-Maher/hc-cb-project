@@ -86,7 +86,7 @@ class ResEncoder(nn.Module):
 
         self.num_ftrs = self.model.fc.in_features
         self.model.fc = nn.Identity()
-        self.repr_dim = 1024  # 1024
+        self.repr_dim = 256  # 1024
         self.image_channel = 3
         # x = torch.randn([32] + [9, 84, 84])
         # x = torch.randn([32] + [obs_shape[0], 64, 64])  # neuro_maze
@@ -294,7 +294,7 @@ class HCCAgent:
         self.gru_hidden = None
         self.cereb_pred = None
 
-    def act(self, obs, step, eval_mode=False):
+    def act(self, obs, step, eval_mode=False, neurons_reset_idx=None):
         # self.epsilon = 0.55
         obs = torch.as_tensor(obs, device=self.device).unsqueeze(0)
         if np.random.rand() > self.epsilon:
@@ -304,6 +304,7 @@ class HCCAgent:
                     x=features.unsqueeze(0),
                     hidden=self.gru_hidden,
                     cereb_pred=self.cereb_pred,
+                    # neurons_reset_idx=neurons_reset_idx,
                     # cereb_pred=None,
                 )
             action = q_values.argmax().item()
@@ -377,10 +378,10 @@ class HCCAgent:
         # augment, put batch and seq_len together
         B, S, C, H, W = obs.shape
 
-        # obs = self.aug(obs.reshape(B * S, C, H, W).float())
-        # next_obs = self.aug(next_obs.reshape(B * S, C, H, W).float())
-        obs = obs.reshape(B * S, C, H, W).float()
-        next_obs = next_obs.reshape(B * S, C, H, W).float()
+        obs = self.aug(obs.reshape(B * S, C, H, W).float())
+        next_obs = self.aug(next_obs.reshape(B * S, C, H, W).float())
+        # obs = obs.reshape(B * S, C, H, W).float()
+        # next_obs = next_obs.reshape(B * S, C, H, W).float()
 
         # # encode
         obs = self.encoder(obs)

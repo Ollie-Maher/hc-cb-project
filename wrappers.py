@@ -423,7 +423,7 @@ def make_env(name, seed, frame_stack, test=False):
         env_north = gym.make(
             name,
             env_ns="North",
-            reward_pos=(4, 5),
+            # reward_pos=(4, 5),
             render_mode="rgb_array",
             agent_view_size=agent_view_size,
         )
@@ -480,6 +480,7 @@ def make_env(name, seed, frame_stack, test=False):
         env_list = []
 
         time_limit = 20
+        top_camera = False
 
         env_north = load(
             domain="base1",
@@ -488,7 +489,7 @@ def make_env(name, seed, frame_stack, test=False):
             # task_name="linear_track",
             time_limit=time_limit,
             seed=seed,
-            top_camera=False,
+            top_camera=top_camera,
             image_only_obs=(not test),
             global_observables=test,
             discrete_actions=True,
@@ -509,7 +510,7 @@ def make_env(name, seed, frame_stack, test=False):
             task_name="reach_target",
             time_limit=time_limit,
             seed=seed,
-            top_camera=False,
+            top_camera=top_camera,
             image_only_obs=(not test),
             global_observables=test,
             maze_ori="South",

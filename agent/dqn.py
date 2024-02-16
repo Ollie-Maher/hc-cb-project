@@ -48,7 +48,7 @@ class Encoder(nn.Module):
         # # self.repr_dim = 32 * 17 * 17  # minigrid full
         # # self.repr_dim = 32 * 38 * 38  # atari
         # # self.repr_dim = 32 * 29 * 29  # neuro_maze
-        self.repr_dim = 4 #1024
+        self.repr_dim = 1024 #1024
         self.out_dim = 32 * 9 * 9  # minigrid partial obs 3
 
         self.convnet = nn.Sequential(
@@ -235,8 +235,8 @@ class DQNAgent:
         self.epsilon = epsilon
 
         if obs_type == "pixels":
-            self.encoder = Encoder(obs_shape).to(self.device)
-            # self.encoder = ResEncoder(obs_shape).to(self.device)
+            # self.encoder = Encoder(obs_shape).to(self.device)
+            self.encoder = ResEncoder(obs_shape).to(self.device)
             self.obs_dim = self.encoder.repr_dim
 
         else:
@@ -331,8 +331,8 @@ class DQNAgent:
         self.q_net_optim.zero_grad()
         q_loss.backward()
         self.q_net_optim.step()
-        if self.encoder_optim is not None:
-            self.encoder_optim.step()
+        # if self.encoder_optim is not None:
+        #     self.encoder_optim.step()
 
         return metrics
 
@@ -354,7 +354,8 @@ class DQNAgent:
         obs = obs.squeeze(1)
         next_obs = next_obs.squeeze(1)
         actions = actions.squeeze(1)
-        # actions = actions[:, 0]  # need to fix this in the replay buffer or wrapper
+        #uncomment next line for minigrid
+        actions = actions[:, 0]  # need to fix this in the replay buffer or wrapper
         # actions = actions.unsqueeze(-1)
         # print(actions.shape)
         rewards = rewards.squeeze(1)
@@ -362,8 +363,10 @@ class DQNAgent:
         # print(obs.shape, actions.shape, rewards.shape, discount.shape, next_obs.shape)
 
         # augment
-        obs = self.aug(obs.float())
-        next_obs = self.aug(next_obs.float())
+        # obs = self.aug(obs.float())
+        # next_obs = self.aug(next_obs.float())
+        obs = obs.float()
+        next_obs = next_obs.float()
         # encode
         obs = self.encoder(obs)
         with torch.no_grad():

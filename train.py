@@ -64,15 +64,7 @@ class Workspace:
         )
         print("agent created")
         # initialize from pretrained
-        # if cfg.snapshot_ts > 0:
-        #     pretrained_agent_model = self.load_snapshot()["agent"]
-        #     self.agent.init_from(pretrained_agent_model)
-        #     print("agent loaded")
         if cfg.snapshot_ts > 0:
-            # pretrained_agent_model = self.load_snapshot()["agent"]
-            # print(pretrained_agent_model)
-            # input(...)
-            # self.agent.init_from(pretrained_agent_model)
             snapshot_base_dir = Path(self.cfg.snapshot_load_dir)
             domain = self.cfg.domain
             snapshot_dir = (
@@ -125,6 +117,7 @@ class Workspace:
         )
         self.train_video_recorder = TrainVideoRecorder(
             self.work_dir if cfg.save_train_video else None,
+            #
             camera_id=0 if "quadruped" not in self.cfg.domain else 2,
             use_wandb=self.cfg.use_wandb,
         )
@@ -172,6 +165,7 @@ class Workspace:
 
     def eval(self):
         step, episode, total_reward = 0, 0, 0
+        prev_reward = 0
         eval_until_episode = utils.Until(self.cfg.num_eval_episodes)
         # meta = self.agent.init_meta()
         meta = OrderedDict()
@@ -183,7 +177,10 @@ class Workspace:
             while not time_step.last():
                 with torch.no_grad(), utils.eval_mode(self.agent):
                     action, _, _, _, _, _ = self.agent.act(
-                        time_step.observation, self.global_step, eval_mode=True
+                        time_step.observation,
+                        self.global_step,
+                        eval_mode=True,
+                        # prev_reward=prev_reward,
                     )
                 time_step = self.eval_env.step(action)
                 # self.eval_env.render()
@@ -211,6 +208,7 @@ class Workspace:
         )
 
         episode_step, episode_reward = 0, 0
+        prev_reward = 0
         reward_switch = 1
         switch_env = False
         time_step = self.train_env.reset()
@@ -288,7 +286,10 @@ class Workspace:
             # sample action
             with torch.no_grad(), utils.eval_mode(self.agent):
                 action, _, _, _, _, _ = self.agent.act(
-                    time_step.observation, self.global_step, eval_mode=False
+                    time_step.observation,
+                    self.global_step,
+                    eval_mode=False,
+                    # prev_reward=prev_reward,
                 )
 
             # try to update the agent
@@ -302,6 +303,7 @@ class Workspace:
             time_step = self.train_env.step(action)
             # self.train_env.render()
             episode_reward += time_step.reward
+            prev_reward = time_step.reward
             self.replay_storage.add(time_step, meta)
             self.train_video_recorder.record(time_step.observation)
             episode_step += 1
