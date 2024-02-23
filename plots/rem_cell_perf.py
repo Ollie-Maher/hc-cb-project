@@ -45,6 +45,11 @@ def get_df(data_path):
     return df_ca1, df_ca3
 
 
+def get_df_pos(data_path):
+    df = pd.read_csv(f"{data_path}/../locations/agent_pos.csv")
+    return df
+
+
 def get_reward_and_steps(model, episode_num=100):
 
     df_filter = model.loc[model["episode"] < episode_num]
@@ -771,16 +776,6 @@ model_names_og = ["hc_s1_w"]
 # model_names_start = ["hc_s2_w"]
 model_names_start = ["hc_s3_w"]
 # model_names_og = ["hc_state_s1_w"]
-# model_names_start = ["hc_state_s2_w"]
-# model_names_start = ["hc_state_s3_w"]
-# # model_names_start = ["hc_state_sg2"]
-# model_names_start = ["hc_state_s2"]
-# model_names_start = ["hc_state_s2_2"]
-# model_names_start = ["hc_state_rem_s1"]
-# model_names_og = ["hc", "bio_hc_cb"]
-# model_names_start = ["hc_gen_start", "bio_hc_cb_gen_start"]
-# model_names_start = ["hc_gen_big", "hc_cb_gen_big", "bio_hc_cb_gen_big"]
-# model_names_start = ["hc_gen_noisy", "hc_cb_gen_noisy", "bio_hc_cb_gen_noisy"]
 max_indices = []
 
 
@@ -819,8 +814,22 @@ for name, n_start in zip(model_names_og, model_names_start):
     data_ca1_start = get_neurons_hm(df_ca1_start)
     data_ca3_start = get_neurons_hm(df_ca3_start)
 
-    #     steps_m, steps_sem, rewards_m, rewards_sem = get_reward_and_steps(df_ca1_start, episode_num=50)
-    #     print(f"steps: {steps_m}, rewards: {rewards_m}")
+    df_start_pos = get_df_pos(eval(f"dp_{n_start}"))
+
+    steps_m, steps_sem, rew_m, rew_sem = get_reward_and_steps(
+        df_start_pos, episode_num=50
+    )
+    # print(f"steps: {steps_m}, rewards: {rewards_m}")
+    width = 0.35
+
+    axs[1].bar(n_start, rew_m, yerr=rew_sem, width=width )
+    axs[2].bar(n_start, steps_m, yerr=steps_sem, width=width )
+    # axs[1].bar(
+    #     n_start, rew_m, yerr=rew_sem, width=width, color=model_color[names[i]]
+    # )
+    # axs[2].bar(
+    #     n_start, steps_m, yerr=steps_sem, width=width, color=model_color[names[i]]
+    # )
 
     max_idx_ca1 = get_max_index(data_ca1, eval(f"plc_{name_c}_intersection"))
     max_idx_ca1_start = get_max_index(
@@ -838,7 +847,7 @@ for name, n_start in zip(model_names_og, model_names_start):
     distance = max_idx_ca1 - max_idx_ca1_start
     print("distance.shape: ", distance.shape)
     distance = np.linalg.norm(distance, axis=1, ord=2)
-    count = np.count_nonzero(distance < 2)
+    count = np.count_nonzero(distance < 4)
     print(f"{name}, count: {count}, distance: {distance.mean()}")
     # axs[start_idx].hist(distance)
     # axs[start_idx].set_title(f"{name} plc")
@@ -857,14 +866,7 @@ for name, n_start in zip(model_names_og, model_names_start):
 
     print(hm_zero_idx)
     print(hm_one_idx)
-    # print(data_ca1[hm_zero_idx[3]])
-    # print(data_ca1_start[hm_zero_idx[3]])
 
-    # max_indices.append(max_indices_per_unit)
-    # print(max_indices_per_unit.shape)
-    # print(max_index.shape)
-    # # continue
-    # # print(eval(f"plc_{name}"))
     # if name == "bio_hc_cb":
     hm_zero_idx = hm_zero_idx[0:1]
     hm_one_idx = hm_one_idx[0:1]

@@ -250,8 +250,8 @@ class HCCAgent:
         self.cereb_pred = None
 
         if obs_type == "pixels":
-            # self.encoder = Encoder(obs_shape).to(self.device)
-            self.encoder = ResEncoder(obs_shape).to(self.device)
+            self.encoder = Encoder(obs_shape).to(self.device)
+            # self.encoder = ResEncoder(obs_shape).to(self.device)
             self.obs_dim = self.encoder.repr_dim
 
         else:
@@ -304,7 +304,7 @@ class HCCAgent:
                     x=features.unsqueeze(0),
                     hidden=self.gru_hidden,
                     cereb_pred=self.cereb_pred,
-                    # neurons_reset_idx=neurons_reset_idx,
+                    neurons_reset_idx=neurons_reset_idx,
                     # cereb_pred=None,
                 )
             action = q_values.argmax().item()

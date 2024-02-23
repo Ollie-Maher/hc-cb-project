@@ -308,11 +308,14 @@ class Workspace:
             # ony first time select random neurons
             if self.global_step == 0:
                 print("### Randomly selecting neurons ###")
-                idx = np.setdiff1d(full_array, feature_idx)
-                idx = np.random.choice(idx, 50, replace=False)
-                # idx = np.random.choice(feature_idx, 50, replace=False)
-                # idx = feature_idx
+                # idx = np.setdiff1d(full_array, feature_idx)  #
+                # idx = np.random.choice(idx, 181, replace=False)  # max 331
+                # idx = np.random.choice(feature_idx, 25, replace=False)
+                # idx = feature_idx  # 181
+                # idx = place_idx # 125
+                # print(len(idx))
                 # print("idx", idx)
+                idx = None
 
                 # with torch.no_grad():
                 #     # for idx in self.cfg.neurons_indices:
