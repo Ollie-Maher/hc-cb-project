@@ -112,11 +112,14 @@ def plot_neurons_hm(data, name="ca3", axs=None, idxs=None):
     # # Flatten the 2D array of Axes objects into a 1D array for easier indexing
     # axs = axs.flatten()
 
-    cmap = "bwr"
+    # cmap = "bwr"
+    cmap = "RdYlBu_r"
+    # cmap = "Spectral_r"
     # interp = "none"
     # interp = "nearest"
     interp = "gaussian"
-    vmin = -0.008
+    # vmin = -0.008
+    vmin = 0.000
     vmax = 0.008
     origin = "lower"
     offset = 0  # 9
@@ -729,97 +732,180 @@ plc_bio_hc_cb, bdc_bio_hc_cb, axis = _single_env_viz_unit_chart(
     name="bio_hc_cb_ca1", axes=axs_unit_bio_hc_cb
 )
 
-# add text to axes
-axs_unit_hc[0].text(
-    -0.6,
-    0.5,
-    "hc",
-    transform=axs_unit_hc[0].transAxes,
-    fontsize=14,
-    fontweight="bold",
-    va="top",
-    ha="center",
-)
-axs_unit_hc[0].text(
-    -0.6,
-    -1.0,
-    "hc-cb",
-    transform=axs_unit_hc[0].transAxes,
-    fontsize=14,
-    fontweight="bold",
-    va="top",
-    ha="center",
-)
-axs_unit_hc[0].text(
-    -0.6,
-    -2.5,
-    "bio-hc-cb",
-    transform=axs_unit_hc[0].transAxes,
-    fontsize=14,
-    fontweight="bold",
-    va="top",
-    ha="center",
-)
+# # add text to axes
+# axs_unit_hc[0].text(
+#     -0.6,
+#     0.5,
+#     "hc",
+#     transform=axs_unit_hc[0].transAxes,
+#     fontsize=14,
+#     fontweight="bold",
+#     va="top",
+#     ha="center",
+# )
+# axs_unit_hc[0].text(
+#     -0.6,
+#     -1.0,
+#     "hc-cb",
+#     transform=axs_unit_hc[0].transAxes,
+#     fontsize=14,
+#     fontweight="bold",
+#     va="top",
+#     ha="center",
+# )
+# axs_unit_hc[0].text(
+#     -0.6,
+#     -2.5,
+#     "bio-hc-cb",
+#     transform=axs_unit_hc[0].transAxes,
+#     fontsize=14,
+#     fontweight="bold",
+#     va="top",
+#     ha="center",
+# )
 
-# # Set the number of rows and columns for the subplot grid
-# num_rows = 2
-# num_cols = 6
+# Set the number of rows and columns for the subplot grid
+num_rows = 3
+num_cols = 6
 
-# # Create a figure and a grid of subplots
-# fig, axs = plt.subplots(num_rows, num_cols, figsize=(12, 12))
-# # fig, axs = plt.subplots(num_rows, num_cols)
+fig = plt.figure(figsize=(5 * num_cols, 5 * num_rows))
+# fig = plt.figure(figsize=(16, 4))
+gs = plt.GridSpec(num_rows, num_cols, wspace=0.5, hspace=0.4)
+ax1 = fig.add_subplot(gs[0, 0])
+ax2 = fig.add_subplot(gs[0, 1])
+ax3 = fig.add_subplot(gs[0, 2])
+ax4 = fig.add_subplot(gs[0, 3])
+ax5 = fig.add_subplot(gs[0, 4])
+ax6 = fig.add_subplot(gs[0, 5])
+ax7 = fig.add_subplot(gs[1, 0])
+ax8 = fig.add_subplot(gs[1, 1])
+ax9 = fig.add_subplot(gs[1, 2])
+ax10 = fig.add_subplot(gs[1, 3])
+ax11 = fig.add_subplot(gs[1, 4])
+ax12 = fig.add_subplot(gs[1, 5])
+ax13 = fig.add_subplot(gs[2, 0:6])
 
-# # Flatten the 2D array of Axes objects into a 1D array for easier indexing
+# Create a figure and a grid of subplots
+# fig, axs = plt.subplots(num_rows, num_cols, figsize=(12, 18))
+# fig, axs = plt.subplots(num_rows, num_cols)
+
+axs = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8, ax9, ax10, ax11, ax12, ax13]
+
+# Flatten the 2D array of Axes objects into a 1D array for easier indexing
 # axs = axs.flatten()
 
-# plc_hc = np.array(plc_hc)
-# bdc_hc = np.array(bdc_hc)
-# plc_hc_cb = np.array(plc_hc_cb)
-# bdc_hc_cb = np.array(bdc_hc_cb)
-# plc_bio_hc_cb = np.array(plc_bio_hc_cb)
-# bdc_bio_hc_cb = np.array(bdc_bio_hc_cb)
 
-# start_idx = 0
-# end_idx = 6
-# model_names = ["bio_hc_cb"]
-# for name in model_names:
-#     df_ca1, df_ca3 = get_df(eval(f"dp_{name}"))
-#     data_ca1 = get_neurons_hm(df_ca1)
-#     data_ca3 = get_neurons_hm(df_ca3)
-#     # print(eval(f"plc_{name}"))
-#     plot_neurons_hm(
-#         data_ca3,
-#         name=f"{name}_ca1",
-#         axs=axs[start_idx:end_idx],
-#         idxs=eval(f"plc_{name}")[14:],
-#     )
-#     start_idx += 6
-#     end_idx += 6
-#     plot_neurons_hm(
-#         data_ca3,
-#         name=f"{name}_ca1",
-#         axs=axs[start_idx:end_idx],
-#         idxs=eval(f"bdc_{name}")[18:],
-#     )
-#     # start_idx += 6
-#     # end_idx += 6
+plc_hc = np.array(plc_hc)
+bdc_hc = np.array(bdc_hc)
+plc_hc_cb = np.array(plc_hc_cb)
+bdc_hc_cb = np.array(bdc_hc_cb)
+plc_bio_hc_cb = np.array(plc_bio_hc_cb)
+bdc_bio_hc_cb = np.array(bdc_bio_hc_cb)
 
-# # fg, axs_unit = plt.subplots(1, 5, figsize=(5 * 5, 5))
+start_idx = 0
+end_idx = 6
+model_names = ["bio_hc_cb"]
+for name in model_names:
+    df_ca1, df_ca3 = get_df(eval(f"dp_{name}"))
+    data_ca1 = get_neurons_hm(df_ca1)
+    data_ca3 = get_neurons_hm(df_ca3)
+    # print(eval(f"plc_{name}"))
+    plot_neurons_hm(
+        data_ca1,
+        name=f"{name}_ca1",
+        axs=axs[start_idx:end_idx],
+        idxs=eval(f"plc_{name}")[14:],
+    )
+    start_idx += 6
+    end_idx += 6
+    plot_neurons_hm(
+        data_ca1,
+        name=f"{name}_ca1",
+        axs=axs[start_idx:end_idx],
+        idxs=eval(f"bdc_{name}")[18:],
+    )
+    # start_idx += 6
+    # end_idx += 6
+
+# fg, axs_unit = plt.subplots(1, 5, figsize=(5 * 5, 5))
 
 
-# # sort filtered cells by firing rate
-# df_ca1, df_ca3 = get_df(dp_hc)
-# data_ca1 = get_neurons_hm(df_ca1)
-# filtered_neurons = data_ca1[plc_hc]
-# m_vals = filtered_neurons.mean(axis=(1,2))
-# # Get the indices that would sort the mean values in descending order
-# # sorted_indices = np.argsort(m_vals)#[::-1]
-# sorted_indices = np.argsort(m_vals)[::-1]
-# # Use take_along_axis to reorder the original array based on the sorted indices
-# sorted_neurons = np.take_along_axis(filtered_neurons, sorted_indices[:, None, None], axis=0)
-# plot_neurons_hm(sorted_neurons, name=f"hc_cb_ca1", axs=axs, idxs=None)
+axs[0].text(
+    -0.2,
+    1.4,
+    "A",
+    transform=axs[0].transAxes,
+    fontsize=16,
+    va="top",
+    ha="center",
+    fontweight="bold",
+)
+axs[0].text(
+    0.5,
+    1.4,
+    "Place cells",
+    transform=axs[0].transAxes,
+    fontsize=14,
+    va="top",
+    ha="left",
+    fontweight="bold",
+)
+axs[6].text(
+    -0.2,
+    1.4,
+    "B",
+    transform=axs[6].transAxes,
+    fontsize=16,
+    va="top",
+    ha="center",
+    fontweight="bold",
+)
+axs[6].text(
+    0.5,
+    1.4,
+    "Border cells",
+    transform=axs[6].transAxes,
+    fontsize=14,
+    va="top",
+    ha="left",
+    fontweight="bold",
+)
+
+# load pdf file image and display
+# axs[12:18].imshow("neurons_stats_ca1.pdf")
+image_place = plt.imread("c3-place-border.png")
+
+axs[12].imshow(image_place, aspect="auto", extent=[0, 100, 0, 100])
+# axs[12].imshow(image_place)
+axs[12].axis("off")
+# Set the extent to zoom in on a region
+# zoom_extent = [20, 80, 20, 80]  # [left, right, bottom, top]
+# axs[12].set_xlim(zoom_extent[0], zoom_extent[1])
+# axs[12].set_ylim(zoom_extent[2], zoom_extent[3])
+
+axs[12].text(
+    -0.2,
+    -0.5,
+    "C",
+    transform=axs[6].transAxes,
+    fontsize=16,
+    va="top",
+    ha="center",
+    fontweight="bold",
+)
+
+axs[12].text(
+    0.5,
+    -0.5,
+    "Animal place and border cells",
+    transform=axs[6].transAxes,
+    fontsize=14,
+    va="top",
+    ha="left",
+    fontweight="bold",
+)
 
 # plt.axis("off")
 plt.tight_layout()
 plt.show()
-# fig.savefig(f"neurons_stats_ca1.pdf", bbox_inches="tight")
+# fig.savefig(f"c3_place_border_all.pdf", bbox_inches="tight")

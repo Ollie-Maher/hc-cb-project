@@ -46,6 +46,7 @@ dp_hc_gen_noisy = "/home/rh19400/neuro-rl/exp_local/2024.01.13/200634_drqn_agent
 dp_hc_cb_gen_noisy = "/home/rh19400/neuro-rl/exp_local/2024.01.13/202324_hcc_agent=hcc,experiment=wm_s,save_stats=true,seed=1/activations"
 dp_bio_hc_cb_gen_noisy = "/home/rh19400/neuro-rl/exp_local/2024.01.13/200451_hccbio_agent=hccbio,experiment=wm,save_stats=true,seed=1/activations"
 
+
 def get_df(data_path):
     df_ca1 = pd.read_csv(f"{data_path}/ca1.csv")
     df_ca3 = pd.read_csv(f"{data_path}/ca3.csv")
@@ -693,7 +694,7 @@ def _single_env_viz_unit_chart(
 #     pixel_max_threshold=int(heatmap.shape[0] * heatmap.shape[1] * 0.5),
 # )
 # # print(vals)
-model_names_t = ["hc_gen_start", "hc_cb_gen_start", "bio_hc_cb_gen_start"]
+# model_names_t = ["hc_gen_start", "hc_cb_gen_start", "bio_hc_cb_gen_start"]
 # model_names_t = ["hc_gen_big", "hc_cb_gen_big", "bio_hc_cb_gen_big"]
 # model_names_t = ["hc_gen_noisy", "hc_cb_gen_noisy", "bio_hc_cb_gen_noisy"]
 model_names = ["hc", "hc_cb", "bio_hc_cb"]
@@ -720,27 +721,29 @@ for i in range(6):
     axs_unit_bio_hc_cb.append(fig.add_subplot(gs[2, i]))
 # axs_unit = fig.add_subplot(gs[0, 0:8])
 # for name in model_names:
-plc_hc, bdc_hc, axis = _single_env_viz_unit_chart(name=f"{model_names[2]}_ca1", axes=axs_unit_hc)
-plc_hc_gen_start, bdc_hc_gen_start, axis = _single_env_viz_unit_chart(f"{model_names_t[2]}_ca1", axs_unit_hc)
-# plc_hc_cb, bdc_hc_cb, axis = _single_env_viz_unit_chart(
-#     name=f"{model_names[1]}_ca1", axes=axs_unit_hc_cb
-# )
-# plc_bio_hc_cb, bdc_bio_hc_cb, axis = _single_env_viz_unit_chart(
-#     name=f"{model_names[2]}_ca1", axes=axs_unit_bio_hc_cb
-# )
+plc_hc, bdc_hc, axis = _single_env_viz_unit_chart(
+    name=f"{model_names[0]}_ca1", axes=axs_unit_hc
+)
+# plc_hc_gen_start, bdc_hc_gen_start, axis = _single_env_viz_unit_chart(f"{model_names_t[2]}_ca1", axs_unit_hc)
+plc_hc_cb, bdc_hc_cb, axis = _single_env_viz_unit_chart(
+    name=f"{model_names[1]}_ca1", axes=axs_unit_hc_cb
+)
+plc_bio_hc_cb, bdc_bio_hc_cb, axis = _single_env_viz_unit_chart(
+    name=f"{model_names[2]}_ca1", axes=axs_unit_bio_hc_cb
+)
 
-print(len(plc_hc))
-print(len(plc_hc_gen_start))
-print(f"hc bdc: {len(bdc_hc)}")
-print(f"hc_gen_start bdc: {len(bdc_hc_gen_start)}")
+# print(len(plc_hc))
+# print(len(plc_hc_gen_start))
+# print(f"hc bdc: {len(bdc_hc)}")
+# print(f"hc_gen_start bdc: {len(bdc_hc_gen_start)}")
 
-plc_intersection = set(plc_hc) & set(plc_hc_gen_start)
-# print(plc_intersection)  
-print(f"hc plc intersection: {len(plc_intersection)}")
-bdc_intersection = set(bdc_hc) & set(bdc_hc_gen_start)
-print(f"hc bdc intersection: {len(bdc_intersection)}")
-plc_intersection = np.array(list(plc_intersection))
-bdc_intersection = np.array(list(bdc_intersection))
+# plc_intersection = set(plc_hc) & set(plc_hc_gen_start)
+# # print(plc_intersection)
+# print(f"hc plc intersection: {len(plc_intersection)}")
+# bdc_intersection = set(bdc_hc) & set(bdc_hc_gen_start)
+# print(f"hc bdc intersection: {len(bdc_intersection)}")
+# plc_intersection = np.array(list(plc_intersection))
+# bdc_intersection = np.array(list(bdc_intersection))
 
 # add text to axes
 axs_unit_hc[0].text(
@@ -776,7 +779,7 @@ axs_unit_hc[0].text(
 # fig.savefig(f"neurons_stats_ca1_gen_noisy.pdf", bbox_inches="tight")
 
 # Set the number of rows and columns for the subplot grid
-num_rows = 6
+num_rows = 2
 num_cols = 6
 
 # Create a figure and a grid of subplots
@@ -795,46 +798,48 @@ axs = axs.flatten()
 
 start_idx = 0
 end_idx = 6
-name_idx = ["hc", "hc"]#, "hc_cb", "bio_hc_cb"]
-model_names = ["bio_hc_cb", "bio_hc_cb_gen_start"]#, "hc_cb", "bio_hc_cb"]
+# name_idx = ["hc", "hc_cb", "bio_hc_cb"]
+# model_names = ["hc", "hc_cb", "bio_hc_cb"]
+name_idx = ["bio_hc_cb"]
+# model_names = ["bio_hc_cb", "bio_hc_cb_gen_start"]#, "hc_cb", "bio_hc_cb"]
 # model_names = ["hc_cb", "hc_cb_gen_start"]#, "hc_cb", "bio_hc_cb"]
-# model_names = ["hc", "hc_gen_start"]#, "hc_cb", "bio_hc_cb"]
+model_names = ["bio_hc_cb"]
 max_indices = []
 for name, idx in zip(model_names, name_idx):
     df_ca1, df_ca3 = get_df(eval(f"dp_{name}"))
     data_ca1 = get_neurons_hm(df_ca1)
     data_ca3 = get_neurons_hm(df_ca3)
 
-    heatmap_data = data_ca1[plc_intersection]
-    # heatmap_data = data_ca1[bdc_intersection]
-    print(heatmap_data.shape, type(heatmap_data))
-    # Reshape the 3D array into a 2D array where each row corresponds to a unit
-    reshaped_data = heatmap_data.reshape(heatmap_data.shape[0], -1)
+    # heatmap_data = data_ca1[plc_intersection]
+    # # heatmap_data = data_ca1[bdc_intersection]
+    # print(heatmap_data.shape, type(heatmap_data))
+    # # Reshape the 3D array into a 2D array where each row corresponds to a unit
+    # reshaped_data = heatmap_data.reshape(heatmap_data.shape[0], -1)
 
-    # Find the column indices (maximum values within each 2D array)
-    col_indices = np.argmax(reshaped_data, axis=1)
+    # # Find the column indices (maximum values within each 2D array)
+    # col_indices = np.argmax(reshaped_data, axis=1)
 
-    # Calculate the row indices based on flattened indices
-    num_cols = heatmap_data.shape[2]
-    row_indices = col_indices // num_cols
-    col_indices = col_indices % num_cols
+    # # Calculate the row indices based on flattened indices
+    # num_cols = heatmap_data.shape[2]
+    # row_indices = col_indices // num_cols
+    # col_indices = col_indices % num_cols
 
-    # Combine row and column indices
-    max_indices_per_unit = np.column_stack((row_indices, col_indices))
+    # # Combine row and column indices
+    # max_indices_per_unit = np.column_stack((row_indices, col_indices))
 
-    print("Maximum indices for each unit:")
-    print(max_indices_per_unit.shape)
-    max_indices.append(max_indices_per_unit)
+    # print("Maximum indices for each unit:")
     # print(max_indices_per_unit.shape)
-    # print(max_index.shape)
-    continue
-    # print(eval(f"plc_{name}"))
+    # max_indices.append(max_indices_per_unit)
+    # # print(max_indices_per_unit.shape)
+    # # print(max_index.shape)
+    # # continue
+    # # print(eval(f"plc_{name}"))
     plot_neurons_hm(
         data_ca1,
         name=f"{name}_ca1",
         axs=axs[start_idx:end_idx],
-        idxs=eval(f"plc_intersection")[0:],  # ca1
-        # idxs=eval(f"plc_{idx}")[14:],  # ca1
+        # idxs=eval(f"plc_intersection")[0:],  # ca1
+        idxs=eval(f"plc_{name}")[14:],  # ca1
         # idxs=eval(f"plc_{name}")[0:],  # ca3
     )
     start_idx += 6
@@ -843,12 +848,12 @@ for name, idx in zip(model_names, name_idx):
         data_ca1,
         name=f"{name}_ca1",
         axs=axs[start_idx:end_idx],
-        idxs=eval(f"plc_intersection")[6:],  # ca1
-        # idxs=eval(f"bdc_{idx}")[18:],  # ca1
+        # idxs=eval(f"plc_intersection")[6:],  # ca1
+        idxs=eval(f"bdc_{name}")[18:],  # ca1
         # idxs=eval(f"bdc_{name}")[0:],  # ca3
     )
-    start_idx += 6
-    end_idx += 6
+    # start_idx += 6
+    # end_idx += 6
 
 axs[0].text(
     -0.2,
@@ -891,17 +896,16 @@ axs[6].text(
     fontweight="bold",
 )
 
-# find square distance between max indices
-max_indices = np.array(max_indices)
-distance = max_indices[0] - max_indices[1]
-print(distance.shape)
-distance = np.linalg.norm(distance, axis=1, ord=2)
-# # distance = np.sum([distance[:, 0] ** 2, distance[:, 1] ** 2])
-# print(distance)
-count = np.count_nonzero(distance < 1)
-print(count)
-axs[0].hist(distance)
-
+# # find square distance between max indices
+# max_indices = np.array(max_indices)
+# distance = max_indices[0] - max_indices[1]
+# print(distance.shape)
+# distance = np.linalg.norm(distance, axis=1, ord=2)
+# # # distance = np.sum([distance[:, 0] ** 2, distance[:, 1] ** 2])
+# # print(distance)
+# count = np.count_nonzero(distance < 1)
+# print(count)
+# axs[0].hist(distance)
 
 
 # # sort filtered cells by firing rate

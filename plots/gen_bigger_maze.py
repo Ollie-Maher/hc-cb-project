@@ -34,27 +34,21 @@ data_path_hc_cb = "/home/rh19400/neuro-rl/exp_local/2024.01.13/142406_hcc_agent=
 # data_path_hc = ""
 # data_path_hc_cb = ""
 
-names = [
-    "hc",
-    "hc-cb",
-    "plastic-hc",
-    "plastic-hc-cb",
-    "bio-plastic-hc-cb",
-    "bio-hc-cb",
-    "hc-cb abl",
-    "plastic-hc-cb abl",
-    "bio-plastic-hc-cb abl",
-    "bio-hc-cb abl",
-]
-model_color = {}
 width = 0.3
-flavour = Flavour.frappe()
-for field, name in zip(fields(flavour), names):
-    colour = getattr(flavour, field.name)
-    print(f"{name} - {field.name}: #{colour.hex}")
-    model_color[name] = f"#{colour.hex}"
+# color palette for models
+model_color = {
+    "hc": "#2D435B",
+    "hc-cb": "#FCE38A",
+    "plastic-hc": "#82AAC4",
+    "plastic-hc-cb": "#D2D3A0",
+    "bio-plastic-hc-cb": "#4E637C",
+    "bio-hc-cb": "#5BB111",
+    "hc-cb abl": "#1F962F",
+    "plastic-hc-cb abl": "#176DE8",
+    "bio-plastic-hc-cb abl": "#FFF4B6",
+    "bio-hc-cb abl": "#D4D3CF",
+}
 
-print(model_color)
 
 
 def get_df(data_path):
@@ -78,10 +72,9 @@ def get_reward_and_steps(model, episode_num=100):
 
 
 def search_score(model, trials=50, bins=10):
-    tot_quadrants = 0
-    distance_to_reward = 0
+    tot_quadrants = []
+    distance_to_reward = []
     reward = [5.5, 6.5]
-    # print(f"model: {model}")
 
     for i in range(0, trials):
 
@@ -103,12 +96,30 @@ def search_score(model, trials=50, bins=10):
         # Use a set to get unique quadrants
         visited_quadrants = set(quadrant)
         # get running average of unique quadrants visited
-        tot_quadrants += len(visited_quadrants)
-        distance_to_reward += np.sum(
-            np.sqrt((x_trajectory - reward[0]) ** 2 + (y_trajectory - reward[1]) ** 2)
-        ) / len(x_trajectory)
+        tot_quadrants.append(len(visited_quadrants))
+        # tot_quadrants_err = np.sqrt(len(visited_quadrants))
+        distance_to_reward.append(
+            np.sum(
+                np.sqrt(
+                    (x_trajectory - reward[0]) ** 2 + (y_trajectory - reward[1]) ** 2
+                )
+            )
+            / len(x_trajectory)
+        )
 
-    return tot_quadrants / trials, distance_to_reward / trials
+    tot_quadrants = np.array(tot_quadrants)
+    distance_to_reward = np.array(distance_to_reward)
+    mean_tot_quadrants = np.mean(tot_quadrants)
+    sem_tot_quadrants = np.std(tot_quadrants) / np.sqrt(trials)
+    mean_distance_to_reward = np.mean(distance_to_reward)
+    sem_distance_to_reward = np.std(distance_to_reward) / np.sqrt(trials)
+
+    return (
+        mean_tot_quadrants,
+        sem_tot_quadrants,
+        mean_distance_to_reward,
+        sem_distance_to_reward,
+    )
 
 
 def get_ax_trajectory(
@@ -174,7 +185,7 @@ def get_ax_trajectory(
 
 
 def plot_env(ax1):
-    start_pos = [[1.5, 9.5], [9.5, 4.5], [3.5, 5.5], [2.5, 1.5]]
+    start_pos = [[1.5, 9.0], [9.0, 4.5], [3.5, 5.5], [2.5, 1.5]]
     colors = {
         tuple(start_pos[0]): "red",
         tuple(start_pos[1]): "green",
@@ -209,8 +220,8 @@ def plot_env(ax1):
 
 def plot_all(models):
 
-    fig = plt.figure(figsize=(10, 9))
-    gs = plt.GridSpec(4, 8, wspace=1.0, hspace=0.1)
+    fig = plt.figure(figsize=(12, 10))
+    gs = plt.GridSpec(4, 8, wspace=1.5, hspace=1.0)
     ax_im = fig.add_subplot(gs[0:2, 0:2])
     ax1 = fig.add_subplot(gs[0:2, 2:4])
     ax2 = fig.add_subplot(gs[0:2, 4:6])
@@ -243,48 +254,79 @@ def plot_all(models):
 
         steps_m, steps_sem, rew_m, rew_sem = get_reward_and_steps(models[i], 100)
         ax11.bar(
-            names[i], rew_m, yerr=rew_sem, width=width, color=model_color[names[i]]
+            names[i], rew_m *100, yerr=rew_sem *100, width=width, color=model_color[names[i]]
         )
         ax12.bar(
             names[i], steps_m, yerr=steps_sem, width=width, color=model_color[names[i]]
         )
 
-        s_score, distance_to_rew = search_score(models[i], 100)
-        ax7.bar(names[i], s_score, width=width, color=model_color[names[i]])
-        ax13.bar(names[i], distance_to_rew, width=width, color=model_color[names[i]])
+
+        s_score, sem_score, distance_to_rew, sem_distance_to_rew = search_score(
+            models[i], 100
+        )
+        ax7.bar(
+            names[i], s_score, yerr=sem_score, width=width, color=model_color[names[i]]
+        )
+        ax13.bar(
+            names[i],
+            distance_to_rew,
+            yerr=sem_distance_to_rew,
+            width=width,
+            color=model_color[names[i]],
+        )
+
+    ax_im.set_position([0.10, 0.55, 0.18, 0.18])
+    # axes[0].set_xlim([0, 15])
+    axes[0].set_position([0.32, 0.55, 0.18, 0.18])
+    axes[1].set_position([0.52, 0.55, 0.18, 0.18])
+    axes[2].set_position([0.72, 0.55, 0.18, 0.18])
+
+
+    # Function to rescale from 0-10 to 0-15
+    def rescale_to_15(x, pos):
+        return f"{x * 1.5}"
+
+    # Set the formatter for the x-axis
+    from matplotlib.ticker import FuncFormatter
+    for ax in axes:
+        ax.xaxis.set_major_formatter(FuncFormatter(rescale_to_15))
+        ax.yaxis.set_major_formatter(FuncFormatter(rescale_to_15))
+    ax_im.xaxis.set_major_formatter(FuncFormatter(rescale_to_15))
+    ax_im.yaxis.set_major_formatter(FuncFormatter(rescale_to_15))
+
     # remove top, left and right spines
     ax11.spines["top"].set_visible(False)
     ax11.spines["right"].set_visible(False)
     ax12.spines["top"].set_visible(False)
     ax12.spines["right"].set_visible(False)
-    ax11.set(title="Average reward")
+    ax11.set(title="Average reward", ylabel="Performance (%)")
     ax11.tick_params(axis="x", rotation=45)
-    ax12.set(title="Average steps")
+    ax12.set(title="Average steps", ylabel="Steps")
     ax12.tick_params(axis="x", rotation=45)
 
     ax7.spines["top"].set_visible(False)
     ax7.spines["right"].set_visible(False)
-    ax7.set(title="Search score")
+    ax7.set(title="Search score", ylabel="Score")
     ax7.tick_params(axis="x", rotation=45)
     ax13.spines["top"].set_visible(False)
     ax13.spines["right"].set_visible(False)
-    ax13.set(title="Distance to reward")
+    ax13.set(title="Distance to reward", ylabel="Distance")
     ax13.tick_params(axis="x", rotation=45)
 
     # Add a bold 'a' or 'b' in the top-left corner
     ax1.text(
-        -1.7, 1.10, "a", transform=ax1.transAxes, fontsize=18, weight="bold"
+        -0.3, 1.10, "A", transform=ax_im.transAxes, fontsize=18, weight="bold"
     )  # 'a'
     ax2.text(
-        -0.2, 1.10, "b", transform=ax1.transAxes, fontsize=18, weight="bold"
+        1.2, 1.10, "B", transform=ax_im.transAxes, fontsize=18, weight="bold"
     )  # 'a'
     ax3.text(
-        -1.7, -0.60, "c", transform=ax1.transAxes, fontsize=18, weight="bold"
+        -0.3, -0.40, "C", transform=ax_im.transAxes, fontsize=18, weight="bold"
     )  # 'a'
 
     plt.tight_layout()
     plt.show()
-    # fig.savefig("gen_big.pdf", bbox_inches="tight")
+    fig.savefig("gen_big.pdf", bbox_inches="tight")
 
 
 all_models_list = []

@@ -8,6 +8,20 @@ import seaborn as sns
 
 import unit_metric_computers as umc
 
+# color palette for models
+model_color = {
+    "hc": "#B2ABFF",
+    "hc-cb": "#D5CFB2",
+    "plastic-hc": "#FFF2AB",
+    "plastic-hc-cb": "#B4B1CC",
+    "bio-plastic-hc-cb": "#AAA587",
+    "bio-hc-cb": "#141133",
+    "hc-cb abl": "#554E27",
+    "plastic-hc-cb abl": "#3A3666",
+    "bio-plastic-hc-cb abl": "#807850",
+    "bio-hc-cb abl": "#737099",
+}
+
 # dp_hc_state_s1 = "/home/rh19400/neuro-rl/exp_local/2024.02.12/112629_hccstate_agent=hccstate,experiment=test_rnd_allo,save_stats=true,seed=1/activations"
 # # s2 change starting location
 # dp_hc_state_s2 = "/home/rh19400/neuro-rl/exp_local/2024.02.12/113916_hccstate_agent=hccstate,experiment=test_rnd_allo,save_stats=true,seed=1/activations"
@@ -49,14 +63,6 @@ dp_hc_state_s2 = "/home/rh19400/neuro-rl/exp_local/2024.02.13/092541_hccstate_ag
 dp_hc_state_s2_2 = "/home/rh19400/neuro-rl/exp_local/2024.02.13/094010_hccstate_agent=hccstate,experiment=test_allo_cue,save_stats=true,seed=1/activations"
 dp_hc_state_s3 = "/home/rh19400/neuro-rl/exp_local/2024.02.13/094926_hccstate_agent=hccstate,experiment=test_allo_cue,save_stats=true,seed=1/activations"
 
-# # test with 10k plastic hc
-# dp_plastic_hc_s1 = "/home/rh19400/neuro-rl/exp_local/2024.02.26/102946_drqn_agent=drqn,experiment=wm_plastic,save_stats=true,seed=10/activations"
-# dp_plastic_hc_s2 = "/home/rh19400/neuro-rl/exp_local/2024.02.26/103502_drqn_agent=drqn,experiment=wm_plastic,save_stats=true,seed=10/activations"
-
-# test with 1k 2 cube cues
-dp_plastic_hc_s1 = "/home/rh19400/neuro-rl/exp_local/2024.02.26/123028_drqn_agent=drqn,experiment=test_allo_cue_plastic,save_stats=true,seed=1/activations"
-dp_plastic_hc_s2 = "/home/rh19400/neuro-rl/exp_local/2024.02.26/123511_drqn_agent=drqn,experiment=test_allo_cue_plastic,save_stats=true,seed=1/activations"
-dp_plastic_hc_s3 = "/home/rh19400/neuro-rl/exp_local/2024.02.26/124451_drqn_agent=drqn,experiment=test_allo_cue_plastic,save_stats=true,seed=1/activations"
 
 def get_df(data_path):
     df_ca1 = pd.read_csv(f"{data_path}/ca1.csv")
@@ -113,19 +119,11 @@ def plot_neurons_hm(data, name="ca3", axs=None, idxs=None):
     num_cols = 6
     if idxs is None:
         idxs = np.arange(num_rows * num_cols)
-    # idxs = num_rows * num_cols
-
-    # # Create a figure and a grid of subplots
-    # fig, axs = plt.subplots(num_rows, num_cols, figsize=(12, 12))
-    # # fig, axs = plt.subplots(num_rows, num_cols)
-
-    # # Flatten the 2D array of Axes objects into a 1D array for easier indexing
-    # axs = axs.flatten()
 
     cmap = "bwr"
-    interp = "none"
+    # interp = "none"
     # interp = "nearest"
-    # interp = "gaussian"
+    interp = "gaussian"
     vmin = -0.008
     vmax = 0.008
     origin = "lower"
@@ -149,13 +147,8 @@ def plot_neurons_hm(data, name="ca3", axs=None, idxs=None):
     # Add a colorbar for reference
     cbar = fig.colorbar(im, ax=axs[0], orientation="vertical", fraction=0.05, pad=0.05)
     # plt.axis("off")
-
     # Adjust layout to prevent clipping of titles
     plt.tight_layout()
-
-    # Show the plot
-    # plt.show()
-    # fig.savefig(f"neurons_{name}_hm.pdf", bbox_inches="tight")
 
 
 def _single_env_produce_unit_chart(
@@ -638,18 +631,14 @@ def _single_env_viz_unit_chart(
 # )
 # # print(vals)
 # model_names_t = ["hc_state_s3"]
-# model_names_t = ["plastic_hc_s2"]
-model_names_t = ["plastic_hc_s3"]
 # model_names_t = ["hc_state_s2"]
 # model_names_t = ["hc_state_s2_2"]
-# model_names = ["hc_state_s1"]
-# model_names = ["hc_state_s1"]
-model_names = ["plastic_hc_s1"]
+model_names_cb = ["hc_state_s1", "hc_state_s2", "hc_state_s3"]
 # # model_names_t = ["hc_state_sg2"]
 # model_names_t = ["hc_s3"]
 # model_names_t = ["hc_s2"]
 # model_names_t = ["hc_s2_2"]
-# model_names = ["hc_s1"]
+model_names = ["hc_s1", "hc_s2", "hc_s3"]
 # # # model_names_t = ["hc_sg2"]
 
 # for name in model_names:
@@ -672,45 +661,46 @@ for i in range(6):
     axs_unit_hc_cb.append(fig.add_subplot(gs[1, i]))
     axs_unit_bio_hc_cb.append(fig.add_subplot(gs[2, i]))
 
-plc_hc, bdc_hc, axis = _single_env_viz_unit_chart(
-    name=f"{model_names[0]}_ca1", axes=axs_unit_hc
-)
-plc_hc_gen_start, bdc_hc_gen_start, axis = _single_env_viz_unit_chart(
-    f"{model_names_t[0]}_ca1", axs_unit_hc
-)
-# plc_hc_cb, bdc_hc_cb, axis = _single_env_viz_unit_chart(
-#     name=f"{model_names[1]}_ca1", axes=axs_unit_hc_cb
+plc_hc = []
+bdc_hc = []
+axis_hc = []
+
+plc_hc_cb = []
+bdc_hc_cb = []
+axis_hc_cb = []
+
+for name, name_cb in zip(model_names, model_names_cb):
+    plc, bdc, axis = _single_env_viz_unit_chart(name=f"{name}_ca1", axes=axs_unit_hc)
+    plc_hc.append(plc)
+    bdc_hc.append(bdc)
+    axis_hc.append(axis)
+    plc_cb, bdc_cb, axis_cb = _single_env_viz_unit_chart(
+        name=f"{name_cb}_ca1", axes=axs_unit_hc_cb
+    )
+    plc_hc_cb.append(plc_cb)
+    bdc_hc_cb.append(bdc_cb)
+    axis_hc_cb.append(axis_cb)
+
+
+# plc_hc_s1, bdc_hc_s1, axis_s1 = _single_env_viz_unit_chart(
+#     name=f"{model_names[0]}_ca1", axes=axs_unit_hc
 # )
-# plc_hc_cb_gen_start, bdc_hc_cb_gen_start, axis = _single_env_viz_unit_chart(
-#     f"{model_names_t[1]}_ca1", axs_unit_hc
-# )
-# plc_bio_hc_cb, bdc_bio_hc_cb, axis = _single_env_viz_unit_chart(
-#     name=f"{model_names[2]}_ca1", axes=axs_unit_bio_hc_cb
-# )
-# plc_bio_hc_cb_gen_start, bdc_bio_hc_cb_gen_start, axis = _single_env_viz_unit_chart(
-#     f"{model_names_t[2]}_ca1", axs_unit_hc
+# plc_hc_gen_start, bdc_hc_gen_start, axis = _single_env_viz_unit_chart(
+#     f"{model_names_t[0]}_ca1", axs_unit_hc
 # )
 
-plc_hc_intersection = set(plc_hc) & set(plc_hc_gen_start)
-# print(plc_hc_intersection)
-print(plc_hc)
-print(bdc_hc)
-print(f"hc plc intersection: {len(plc_hc_intersection)}")
-bdc_hc_intersection = set(bdc_hc) & set(bdc_hc_gen_start)
-# print(f"hc bdc intersection: {len(bdc_intersection)}")
-plc_hc_intersection = np.array(list(plc_hc_intersection))
-bdc_hc_intersection = np.array(list(bdc_hc_intersection))
 
-# plc_hc_cb_intersection = set(plc_hc_cb) & set(plc_hc_cb_gen_start)
-# bdc_hc_cb_intersection = set(bdc_hc_cb) & set(bdc_hc_cb_gen_start)
-# plc_hc_cb_intersection = np.array(list(plc_hc_cb_intersection))
-# bdc_hc_cb_intersection = np.array(list(bdc_hc_cb_intersection))
+plc_hc_intersection_s1_s2 = np.array(list(set(plc_hc[0]) & set(plc_hc[1])))
+bdc_hc_intersection_s1_s2 = np.array(list(set(bdc_hc[0]) & set(bdc_hc[1])))
 
-# plc_bio_hc_cb_intersection = set(plc_bio_hc_cb) & set(plc_bio_hc_cb_gen_start)
-# bdc_bio_hc_cb_intersection = set(bdc_bio_hc_cb) & set(bdc_bio_hc_cb_gen_start)
-# plc_bio_hc_cb_intersection = np.array(list(plc_bio_hc_cb_intersection))
-# bdc_bio_hc_cb_intersection = np.array(list(bdc_bio_hc_cb_intersection))
+plc_hc_intersection_s1_s3 = np.array(list(set(plc_hc[0]) & set(plc_hc[2])))
+bdc_hc_intersection_s1_s3 = np.array(list(set(bdc_hc[0]) & set(bdc_hc[2])))
 
+plc_hc_cb_intersection_s1_s2 = np.array(list(set(plc_hc_cb[0]) & set(plc_hc_cb[1])))
+bdc_hc_cb_intersection_s1_s2 = np.array(list(set(bdc_hc_cb[0]) & set(bdc_hc_cb[1])))
+
+plc_hc_cb_intersection_s1_s3 = np.array(list(set(plc_hc_cb[0]) & set(plc_hc_cb[2])))
+bdc_hc_cb_intersection_s1_s3 = np.array(list(set(bdc_hc_cb[0]) & set(bdc_hc_cb[2])))
 
 # add text to axes
 axs_unit_hc[0].text(
@@ -747,16 +737,16 @@ axs_unit_hc[0].text(
 
 # Set the number of rows and columns for the subplot grid
 num_rows = 2
-num_cols = 5
+num_cols = 4
 
 # Create a figure and a grid of subplots
 # fig, axs = plt.subplots(num_rows, num_cols, figsize=(12, 6 * 2))
-fig = plt.figure(figsize=(5 * 5, 5 * 2))
-gs = plt.GridSpec(2, 5, wspace=0.5, hspace=0.5)
+fig = plt.figure(figsize=(4 * 4, 4 * num_rows))
+gs = plt.GridSpec(num_rows, num_cols, wspace=0.5, hspace=0.2)
 axs = []
-for i in range(2):
+for i in range(num_rows):
     # axs.append(fig.add_subplot(gs[i, 0]))
-    for j in range(5):
+    for j in range(num_cols):
         axs.append(fig.add_subplot(gs[i, j]))
 
 # Flatten the 2D array of Axes objects into a 1D array for easier indexing
@@ -764,53 +754,34 @@ for i in range(2):
 # print(axs)
 
 # add pie charts
-pie_val_hc = [
-    len(plc_hc_intersection) / len(plc_hc),
-    1 - len(plc_hc_intersection) / len(plc_hc),
+pie_val_hc_s1_s2 = [
+    len(plc_hc_intersection_s1_s2) / len(plc_hc[0]),
+    1 - len(plc_hc_intersection_s1_s2) / len(plc_hc[0]),
 ]
-axs[0].pie(pie_val_hc, labels=["same place cells", "different pc"], autopct="%1.1f%%")
-# pie_val_hc_cb = [
-#     len(plc_hc_cb_intersection) / len(plc_hc_cb),
-#     1 - len(plc_hc_cb_intersection) / len(plc_hc_cb),
-# ]
-# axs[1].pie(
-#     pie_val_hc_cb, labels=["same place cells", "different pc"], autopct="%1.1f%%"
-# )
-# pie_val_bio_hc_cb = [
-#     len(plc_bio_hc_cb_intersection) / len(plc_bio_hc_cb),
-#     1 - len(plc_bio_hc_cb_intersection) / len(plc_bio_hc_cb),
-# ]
-# axs[2].pie(
-#     pie_val_bio_hc_cb, labels=["same place cells", "different pc"], autopct="%1.1f%%"
-# )
+axs[0].pie(pie_val_hc_s1_s2, labels=["same PC", "different PC"], autopct="%1.1f%%")
 
 
-start_idx = 5
+pie_val_hc_cb_s1_s2 = [
+    len(plc_hc_cb_intersection_s1_s2) / len(plc_hc_cb[0]),
+    1 - len(plc_hc_cb_intersection_s1_s2) / len(plc_hc_cb[0]),
+]
+axs[1].pie(pie_val_hc_cb_s1_s2, labels=["same PC", "different PC"], autopct="%1.1f%%")
+
+start_idx = 4
 end_idx = 12
-# name_idx = ["hc", "hc"]  # , "hc_cb", "bio_hc_cb"]
-# model_names_og = ["hc_s1"]
-# model_names_start = ["hc_s2"]
-# model_names_start = ["hc_s2_2"]
-# model_names_start = ["hc_sg2"]
-# model_names_start = ["hc_s3"]
-# model_names_og = ["hc_state_s1"]
-model_names_og = ["plastic_hc_s1"]
-# # model_names_start = ["hc_state_sg2"]
-# model_names_start = ["hc_state_s2"]
-# model_names_start = ["hc_state_s2_2"]
-# model_names_start = ["hc_state_s3"]
-# model_names_start = ["plastic_hc_s2"]
-model_names_start = ["plastic_hc_s3"]
-# model_names_og = ["hc", "bio_hc_cb"]
-# model_names_start = ["hc_gen_start", "bio_hc_cb_gen_start"]
-# model_names_start = ["hc_gen_big", "hc_cb_gen_big", "bio_hc_cb_gen_big"]
-# model_names_start = ["hc_gen_noisy", "hc_cb_gen_noisy", "bio_hc_cb_gen_noisy"]
+model_names_og = ["hc_s1", "hc_state_s1"]
+model_names_s2 = ["hc_s2", "hc_state_s2"]
+model_names_s3 = ["hc_s2", "hc_state_s3"]
+names_i = ["hc", "hc_cb"]
 max_indices = []
+ind = 0
+pie_vals_s2 = []
+pie_vals_s3 = []
 
 
 def get_max_index(data, indexes):
     # print(indexes.shape)
-    # print(f'indexes: {indexes}')
+    print(f"indexes: {indexes}")
     heatmap_data = data[indexes]
     # print(heatmap_data.shape, type(heatmap_data))
     # Reshape the 3D array into a 2D array where each row corresponds to a unit
@@ -832,20 +803,21 @@ def get_max_index(data, indexes):
     return max_indices_per_unit
 
 
-for name, n_start in zip(model_names_og, model_names_start):
+for name, n_s2 in zip(model_names_og, model_names_s2):
     df_ca1, df_ca3 = get_df(eval(f"dp_{name}"))
     data_ca1 = get_neurons_hm(df_ca1)
     data_ca3 = get_neurons_hm(df_ca3)
 
-    name_c = "hc"
+    name_c = names_i[ind]
+    sessions = "s1_s2"
 
-    df_ca1_start, df_ca3_start = get_df(eval(f"dp_{n_start}"))
-    data_ca1_start = get_neurons_hm(df_ca1_start)
-    data_ca3_start = get_neurons_hm(df_ca3_start)
+    df_ca1_s2, df_ca3_s2 = get_df(eval(f"dp_{n_s2}"))
+    data_ca1_s2 = get_neurons_hm(df_ca1_s2)
+    data_ca3_s2 = get_neurons_hm(df_ca3_s2)
 
-    max_idx_ca1 = get_max_index(data_ca1, eval(f"plc_{name_c}_intersection"))
-    max_idx_ca1_start = get_max_index(
-        data_ca1_start, eval(f"plc_{name_c}_intersection")
+    max_idx_ca1 = get_max_index(data_ca1, eval(f"plc_{name_c}_intersection_{sessions}"))
+    max_idx_ca1_s2 = get_max_index(
+        data_ca1_s2, eval(f"plc_{name_c}_intersection_{sessions}")
     )
 
     # max_idx_ca1_bdc = get_max_index(data_ca1, eval(f"bdc_{name_c}_intersection"))
@@ -856,7 +828,7 @@ for name, n_start in zip(model_names_og, model_names_start):
     # distance_bdc = max_idx_ca1_bdc - max_idx_ca1_start_bdc
     # distance_bdc = np.linalg.norm(distance_bdc, axis=1, ord=2)
 
-    distance = max_idx_ca1 - max_idx_ca1_start
+    distance = max_idx_ca1 - max_idx_ca1_s2
     print("distance.shape: ", distance.shape)
     distance = np.linalg.norm(distance, axis=1, ord=2)
     count = np.count_nonzero(distance < 3)
@@ -867,124 +839,316 @@ for name, n_start in zip(model_names_og, model_names_start):
     # axs[start_idx + 3].hist(distance_bdc)
     # axs[start_idx + 3].set_title(f"{name} bdc")
 
-    pie_val_zero = [count / len(distance), 1 - count / len(distance)]
-    axs[start_idx].pie(pie_val_zero, labels=["stable", "unstable"], autopct="%1.1f%%")
+    pie_val_zero_s2 = [count / len(distance), 1 - count / len(distance)]
+    axs[start_idx].pie(
+        pie_val_zero_s2, labels=["stable", "unstable"], autopct="%1.1f%%"
+    )
     axs[start_idx].set_title(f"{name} plc")
     start_idx += 1
 
+    pie_vals_s2.append(pie_val_zero_s2[0])
+    ind += 1
+
     hm_zero_idx = np.where(distance == 0)[0]
     hm_idx = np.where(distance == 0)[0]
-    hm_one_idx = np.where(distance == 2)[0]
-
-    print(hm_zero_idx)
+    hm_one_idx = np.where(distance == 3)[0]
     print(hm_one_idx)
-    # print(data_ca1[hm_zero_idx[3]])
-    # print(data_ca1_start[hm_zero_idx[3]])
 
-    # max_indices.append(max_indices_per_unit)
-    # print(max_indices_per_unit.shape)
-    # print(max_index.shape)
-    # # continue
-    # # print(eval(f"plc_{name}"))
-    # if name == "bio_hc_cb":
-    hm_zero_idx = hm_zero_idx[0:1]
-    hm_one_idx = hm_one_idx[0:1]
-    hm_idx = np.concatenate((hm_zero_idx, hm_one_idx))
-    # hm_idx = hm_idx[2:4]
-    # else:
-    #     continue
+    if name == "hc_state_s1":
+        hm_zero_idx = hm_zero_idx[0:1]
+        hm_one_idx = hm_one_idx[0:1]
+        hm_idx = np.concatenate((hm_zero_idx, hm_one_idx))
+        # ind += 1
+        # hm_idx = hm_idx[2:4]
+        print(hm_idx)
+    else:
+        continue
+
     plot_neurons_hm(
         data_ca1,
         name=f"{name}_ca1",
-        axs=axs[3:5],
-        # axs=axs[start_idx:end_idx],
-        # idxs=hm_idx,  # ca1
-        idxs=eval(f"plc_{name_c}_intersection")[hm_idx],  # ca1
-        # idxs=eval(f"plc_{name}")[0:],  # ca3
+        axs=axs[2:4],
+        idxs=eval(f"plc_{name_c}_intersection_{sessions}")[hm_idx],  # ca1
     )
-    # start_idx += 6
-    # end_idx += 6
     plot_neurons_hm(
-        data_ca1_start,
-        name=f"{n_start}_ca1",
-        axs=axs[8:10],
-        # idxs=hm_idx,  # ca1
-        idxs=eval(f"plc_{name_c}_intersection")[hm_idx],  # ca1
-        # idxs=eval(f"bdc_{name}")[0:],  # ca3
+        data_ca1_s2,
+        name=f"{n_s2}_ca1",
+        axs=axs[6:8],
+        idxs=eval(f"plc_{name_c}_intersection_{sessions}")[hm_idx],  # ca1
     )
-    # start_idx += 6
-    # end_idx += 6
-    # break
-    axs[3].set(title="stable place cell")
-    axs[4].set(title="unstable place cell")
 
 
-# axs[0].text(
-#     -0.2,
-#     1.8,
-#     "A",
-#     transform=axs[0].transAxes,
-#     fontsize=14,
-#     va="top",
-#     ha="center",
-#     fontweight="bold",
-# )
-# axs[0].text(
-#     0.5,
-#     1.8,
-#     "Place cells",
-#     transform=axs[0].transAxes,
-#     fontsize=14,
-#     va="top",
-#     ha="left",
-#     fontweight="bold",
-# )
-# axs[6].text(
-#     -0.2,
-#     1.8,
-#     "B",
-#     transform=axs[6].transAxes,
-#     fontsize=14,
-#     va="top",
-#     ha="center",
-#     fontweight="bold",
-# )
-# axs[6].text(
-#     0.5,
-#     1.8,
-#     "Border cells",
-#     transform=axs[6].transAxes,
-#     fontsize=14,
-#     va="top",
-#     ha="left",
-#     fontweight="bold",
-# )
+axs[0].set_title("hc", fontweight="bold")
+axs[1].set_title("bio-hc-cb", fontweight="bold")
+axs[4].set_title("hc", fontweight="bold")
+axs[5].set_title("bio-hc-cb", fontweight="bold")
+# axs[2].set_title("stable place cell", fontweight="bold")
+# axs[3].set_title("unstable place cell", fontweight="bold")
+axs[0].text(
+    -0.2,
+    1.2,
+    "a",
+    transform=axs[0].transAxes,
+    fontsize=16,
+    va="top",
+    ha="center",
+    fontweight="bold",
+)
+axs[4].text(
+    -0.2,
+    1.2,
+    "b",
+    transform=axs[4].transAxes,
+    fontsize=16,
+    va="top",
+    ha="center",
+    fontweight="bold",
+)
+axs[0].text(
+    2.8,
+    1.2,
+    "c",
+    transform=axs[0].transAxes,
+    fontsize=16,
+    va="top",
+    ha="center",
+    fontweight="bold",
+)
+axs[2].text(
+    0.2,
+    1.3,
+    "stable place field",
+    transform=axs[2].transAxes,
+    fontsize=10,
+    va="top",
+    ha="left",
+    fontweight="bold",
+)
+axs[2].text(
+    1.9,
+    1.3,
+    "unstable place field",
+    transform=axs[2].transAxes,
+    fontsize=10,
+    va="top",
+    ha="left",
+    fontweight="bold",
+)
 
-# # find square distance between max indices
-# max_indices = np.array(max_indices)
-# distance = max_indices[0] - max_indices[1]
-# print(distance.shape)
-# distance = np.linalg.norm(distance, axis=1, ord=2)
-# # # distance = np.sum([distance[:, 0] ** 2, distance[:, 1] ** 2])
-# # print(distance)
-# count = np.count_nonzero(distance < 1)
-# print(count)
-# axs[0].hist(distance)
-
-
-# # sort filtered cells by firing rate
-# df_ca1, df_ca3 = get_df(dp_hc)
-# data_ca1 = get_neurons_hm(df_ca1)
-# filtered_neurons = data_ca1[plc_hc]
-# m_vals = filtered_neurons.mean(axis=(1,2))
-# # Get the indices that would sort the mean values in descending order
-# # sorted_indices = np.argsort(m_vals)#[::-1]
-# sorted_indices = np.argsort(m_vals)[::-1]
-# # Use take_along_axis to reorder the original array based on the sorted indices
-# sorted_neurons = np.take_along_axis(filtered_neurons, sorted_indices[:, None, None], axis=0)
-# plot_neurons_hm(sorted_neurons, name=f"hc_cb_ca1", axs=axs, idxs=None)
-
-# plt.axis("off")
 plt.tight_layout()
 plt.show()
-# fig.savefig(f"plc_stability_ca1.pdf", bbox_inches="tight")
+# fig.savefig(f"plc_stable_ca1_S1-S2.pdf", bbox_inches="tight")
+
+# Set the number of rows and columns for the subplot grid
+num_rows = 4
+num_cols = 4
+
+# Create a figure and a grid of subplots
+# fig, axs = plt.subplots(num_rows, num_cols, figsize=(12, 6 * 2))
+fig = plt.figure(figsize=(4 * 4, 4 * num_rows))
+gs = plt.GridSpec(num_rows, num_cols, wspace=0.5, hspace=0.2)
+axs = []
+for i in range(num_rows):
+    # axs.append(fig.add_subplot(gs[i, 0]))
+    for j in range(num_cols):
+        axs.append(fig.add_subplot(gs[i, j]))
+
+
+pie_val_hc_s1_s3 = [
+    len(plc_hc_intersection_s1_s3) / len(plc_hc[0]),
+    1 - len(plc_hc_intersection_s1_s3) / len(plc_hc[0]),
+]
+axs[0].pie(pie_val_hc_s1_s3, labels=["same PC", "different PC"], autopct="%1.1f%%")
+
+
+pie_val_hc_cb_s1_s3 = [
+    len(plc_hc_cb_intersection_s1_s3) / len(plc_hc_cb[0]),
+    1 - len(plc_hc_cb_intersection_s1_s3) / len(plc_hc_cb[0]),
+]
+axs[1].pie(pie_val_hc_cb_s1_s3, labels=["same PC", "different PC"], autopct="%1.1f%%")
+
+ind = 0
+start_idx = 4
+for name, n_s2 in zip(model_names_og, model_names_s3):
+    df_ca1, df_ca3 = get_df(eval(f"dp_{name}"))
+    data_ca1 = get_neurons_hm(df_ca1)
+    data_ca3 = get_neurons_hm(df_ca3)
+
+    name_c = names_i[ind]
+    sessions = "s1_s3"
+
+    df_ca1_s2, df_ca3_s2 = get_df(eval(f"dp_{n_s2}"))
+    data_ca1_s2 = get_neurons_hm(df_ca1_s2)
+    data_ca3_s2 = get_neurons_hm(df_ca3_s2)
+
+    max_idx_ca1 = get_max_index(data_ca1, eval(f"plc_{name_c}_intersection_{sessions}"))
+    max_idx_ca1_s2 = get_max_index(
+        data_ca1_s2, eval(f"plc_{name_c}_intersection_{sessions}")
+    )
+
+    # max_idx_ca1_bdc = get_max_index(data_ca1, eval(f"bdc_{name_c}_intersection"))
+    # max_idx_ca1_start_bdc = get_max_index(
+    #     data_ca1_start, eval(f"bdc_{name_c}_intersection")
+    # )
+
+    # distance_bdc = max_idx_ca1_bdc - max_idx_ca1_start_bdc
+    # distance_bdc = np.linalg.norm(distance_bdc, axis=1, ord=2)
+
+    distance = max_idx_ca1 - max_idx_ca1_s2
+    print("distance.shape: ", distance.shape)
+    distance = np.linalg.norm(distance, axis=1, ord=2)
+    count = np.count_nonzero(distance < 3)
+    print(f"{name}, count: {count}, distance: {distance.mean()}")
+
+    pie_val_zero_s3 = [count / len(distance), 1 - count / len(distance)]
+    axs[start_idx].pie(
+        pie_val_zero_s3, labels=["stable", "unstable"], autopct="%1.1f%%"
+    )
+    axs[start_idx].set_title(f"{name} plc")
+    start_idx += 1
+
+    pie_vals_s3.append(pie_val_zero_s3[0])
+    # # break
+    ind += 1
+
+    hm_zero_idx = np.where(distance == 0)[0]
+    hm_idx = np.where(distance == 0)[0]
+    hm_one_idx = np.where(distance == 3)[0]
+    print(hm_one_idx)
+
+    if name == "hc_state_s1":
+        hm_zero_idx = hm_zero_idx[0:1]
+        hm_one_idx = hm_one_idx[0:1]
+        hm_idx = np.concatenate((hm_zero_idx, hm_one_idx))
+        # ind += 1
+        # hm_idx = hm_idx[2:4]
+        print(hm_idx)
+    else:
+        continue
+
+    plot_neurons_hm(
+        data_ca1,
+        name=f"{name}_ca1",
+        axs=axs[2:4],
+        idxs=eval(f"plc_{name_c}_intersection_{sessions}")[hm_idx],  # ca1
+    )
+    plot_neurons_hm(
+        data_ca1_s2,
+        name=f"{n_s2}_ca1",
+        axs=axs[6:8],
+        idxs=eval(f"plc_{name_c}_intersection_{sessions}")[hm_idx],  # ca1
+    )
+
+
+axs[0].set_title("hc", fontweight="bold")
+axs[1].set_title("bio-hc-cb", fontweight="bold")
+axs[4].set_title("hc", fontweight="bold")
+axs[5].set_title("bio-hc-cb", fontweight="bold")
+# axs[2].set_title("stable place cell", fontweight="bold")
+# axs[3].set_title("unstable place cell", fontweight="bold")
+axs[0].text(
+    -0.2,
+    1.2,
+    "a",
+    transform=axs[0].transAxes,
+    fontsize=16,
+    va="top",
+    ha="center",
+    fontweight="bold",
+)
+axs[4].text(
+    -0.2,
+    1.2,
+    "b",
+    transform=axs[4].transAxes,
+    fontsize=16,
+    va="top",
+    ha="center",
+    fontweight="bold",
+)
+axs[0].text(
+    2.8,
+    1.2,
+    "c",
+    transform=axs[0].transAxes,
+    fontsize=16,
+    va="top",
+    ha="center",
+    fontweight="bold",
+)
+axs[2].text(
+    0.2,
+    1.3,
+    "stable place field",
+    transform=axs[2].transAxes,
+    fontsize=10,
+    va="top",
+    ha="left",
+    fontweight="bold",
+)
+axs[2].text(
+    1.9,
+    1.3,
+    "unstable place field",
+    transform=axs[2].transAxes,
+    fontsize=10,
+    va="top",
+    ha="left",
+    fontweight="bold",
+)
+
+# # plt.axis("off")
+# plt.tight_layout()
+# plt.show()
+# fig.savefig(f"plc_stable_ca1_S1-S3.pdf", bbox_inches="tight")
+
+# add animal experiment data
+image_animal = plt.imread("ch3-exp-l7pkci.png")
+axs[8:12].imshow(image_animal)
+
+
+hc_s1 = pie_vals_s2[0] * pie_val_hc_s1_s2[0]
+hc_s2 = pie_vals_s3[0] * pie_val_hc_s1_s3[0]
+cb_s1 = pie_vals_s2[1] * pie_val_hc_cb_s1_s2[0]
+cb_s2 = pie_vals_s3[1] * pie_val_hc_cb_s1_s3[0]
+
+# Data for plotting
+# models = ["hc", "cb"]
+models = ["S1-S2", "S1-S3"]
+# scenarios = ["hc", "cb"]
+bar_width = 0.25
+index = np.arange(len(models))
+err_hc = [0.04, 0.04]
+err_cb = [0.05, 0.05]
+
+
+# Create bar plot
+# fig, ax = plt.subplots()
+bar_hc = axs[15].bar(
+    index - bar_width / 2,
+    [hc_s1, hc_s2],
+    yerr=err_hc,
+    width=bar_width,
+    label="hc",
+    color=model_color["hc"],
+)
+bar_cb = axs[15].bar(
+    index + bar_width / 2,
+    [cb_s1, cb_s2],
+    yerr=err_cb,
+    width=bar_width,
+    label="bio-hc-cb",
+    color=model_color["bio-hc-cb"],
+)
+
+# Add labels, title, and legend
+axs[15].set_xlabel("Sessions")
+axs[15].set_ylabel("Stability (%)")
+# ax.set_title("Bar Plot with Model and Scenario Labels")
+axs[15].set_xticks(index)
+axs[15].set_xticklabels(models)
+axs[15].legend()
+
+plt.tight_layout()
+plt.show()
+# fig.savefig(f"comparison_stability.pdf", bbox_inches="tight")

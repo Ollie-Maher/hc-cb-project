@@ -3,26 +3,40 @@ from dataclasses import fields
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from catppuccin import Flavour
+# from catppuccin import Flavour
 
-names = [
-    "hc",
-    "hc-cb",
-    "plastic-hc",
-    "plastic-hc-cb",
-    "bio-plastic-hc-cb",
-    "bio-hc-cb",
-    "hc-cb abl",
-    "plastic-hc-cb abl",
-    "bio-plastic-hc-cb abl",
-    "bio-hc-cb abl",
-]
-model_color = {}
-flavour = Flavour.frappe()
-for field, name in zip(fields(flavour), names):
-    colour = getattr(flavour, field.name)
-    print(f"{name} - {field.name}: #{colour.hex}")
-    model_color[name] = f"#{colour.hex}"
+# names = [
+#     "hc",
+#     "hc-cb",
+#     "plastic-hc",
+#     "plastic-hc-cb",
+#     "bio-plastic-hc-cb",
+#     "bio-hc-cb",
+#     "hc-cb abl",
+#     "plastic-hc-cb abl",
+#     "bio-plastic-hc-cb abl",
+#     "bio-hc-cb abl",
+# ]
+# model_color = {}
+# flavour = Flavour.frappe()
+# for field, name in zip(fields(flavour), names):
+#     colour = getattr(flavour, field.name)
+#     print(f"{name} - {field.name}: #{colour.hex}")
+#     model_color[name] = f"#{colour.hex}"
+
+# color palette for models
+model_color = {
+    "hc": "#2D435B",
+    "hc-cb": "#FCE38A",
+    "plastic-hc": "#82AAC4",
+    "plastic-hc-cb": "#D2D3A0",
+    "bio-plastic-hc-cb": "#4E637C",
+    "bio-hc-cb": "#5BB111",
+    "hc-cb abl": "#1F962F",
+    "plastic-hc-cb abl": "#176DE8",
+    "bio-plastic-hc-cb abl": "#FFF4B6",
+    "bio-hc-cb abl": "#D4D3CF",
+}
 
 # animal_data, first 10 is control, next 10 is without cb, next 10 control error, next 10 without cb error
 animal_data_x = [
@@ -447,11 +461,11 @@ ax4, ax5, ax6 = plot_steps_from_df(
 )
 
 # Add a bold 'a' or 'b' in the top-left corner
-ax1.text(-0.25, 1.00, "a", transform=ax1.transAxes, fontsize=18, weight="bold")  # 'a'
-ax2.text(1.40, 1.00, "b", transform=ax1.transAxes, fontsize=18, weight="bold")  # 'a'
-ax3.text(3.00, 1.00, "c", transform=ax1.transAxes, fontsize=18, weight="bold")  # 'a'
-ax3.text(-0.55, -0.45, "d", transform=ax1.transAxes, fontsize=18, weight="bold")  # 'a'
-ax3.text(2.15, -0.45, "e", transform=ax1.transAxes, fontsize=18, weight="bold")  # 'a'
+ax1.text(-0.25, 1.00, "A", transform=ax1.transAxes, fontsize=18, weight="bold")  # 'a'
+ax2.text(1.40, 1.00, "B", transform=ax1.transAxes, fontsize=18, weight="bold")  # 'a'
+ax3.text(3.00, 1.00, "C", transform=ax1.transAxes, fontsize=18, weight="bold")  # 'a'
+ax3.text(-0.55, -0.45, "D", transform=ax1.transAxes, fontsize=18, weight="bold")  # 'a'
+ax3.text(2.15, -0.45, "E", transform=ax1.transAxes, fontsize=18, weight="bold")  # 'a'
 
 # Add animal spatial water maze
 img = plt.imread("animal_wm.png")
