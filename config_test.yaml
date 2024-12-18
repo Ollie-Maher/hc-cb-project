@@ -1,5 +1,6 @@
 defaults:
   - agent: dqn
+  - _self_
   - override hydra/launcher: submitit_local
 
 # task settings
