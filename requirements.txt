@@ -1,0 +1,7 @@
+dm_control
+dm_env
+numpy
+wandb
+pandas
+torch
+hydra-core
