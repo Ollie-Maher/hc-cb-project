@@ -5,3 +5,4 @@ wandb
 pandas
 torch
 hydra-core
+hydra-submitit-launcher

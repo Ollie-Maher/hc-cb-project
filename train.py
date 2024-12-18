@@ -357,7 +357,7 @@ class Workspace:
         return None
 
 
-@hydra.main(config_path=".", config_name="config")
+@hydra.main(config_path=".", config_name="config", version_base=None)
 def main(cfg):
     from train import Workspace as W
 
