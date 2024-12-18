@@ -1,7 +1,7 @@
 defaults:
   - agent: dqn
-  - override hydra/launcher: submitit_local
   - __self__
+  - override hydra/launcher: submitit_local
 
 # task settings
 # task: MiniGrid-TMaze-7x7-v0
