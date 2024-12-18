@@ -82,8 +82,8 @@ class Workspace:
             )
             # pretrained_agent_model_pth =
             print(snapshot)
-            print(torch.load(snapshot)["agent"])
             self.agent = torch.load(snapshot)["agent"]
+            print(self.agent)
             # self.agent.train(False)
             print("agent loaded")
 
